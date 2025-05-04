@@ -97,10 +97,11 @@ const FirePopup: React.FC<FirePopupProps> = ({
           variant="ghost" 
           size="sm" 
           className="flex items-center text-accent-dark p-0 h-auto"
-          onClick={onViewDetails}
+          onClick={wildfire.newsUrl ? () => window.open(wildfire.newsUrl, '_blank') : onViewDetails}
+          title={wildfire.newsUrl ? "Open news article in new tab" : "View details"}
         >
-          <span className="material-icons text-sm mr-1">info</span>
-          Details
+          <span className="material-icons text-sm mr-1">{wildfire.newsUrl ? 'article' : 'info'}</span>
+          {wildfire.newsUrl ? 'News' : 'Details'}
         </Button>
         <Button 
           variant="ghost" 

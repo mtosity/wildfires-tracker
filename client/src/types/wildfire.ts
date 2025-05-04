@@ -11,6 +11,7 @@ export interface Wildfire {
   cause?: string;
   perimeterCoordinates?: string; // JSON string of coordinates defining fire perimeter
   updated: string;
+  newsUrl?: string; // URL to news article or official information about the fire
 }
 
 export interface PerimeterCoordinate {

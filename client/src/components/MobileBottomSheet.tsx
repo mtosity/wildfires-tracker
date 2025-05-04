@@ -123,6 +123,16 @@ const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
         </div>
       </div>
       <div className="px-4 pb-4 flex space-x-2">
+        {wildfire.newsUrl && (
+          <Button
+            variant="outline"
+            className="flex-1 border border-primary text-primary py-2 rounded-lg flex items-center justify-center"
+            onClick={() => window.open(wildfire.newsUrl, '_blank')}
+          >
+            <span className="material-icons text-sm mr-1">article</span>
+            News
+          </Button>
+        )}
         <Button
           className="flex-1 bg-primary text-white py-2 rounded-lg flex items-center justify-center"
           onClick={onGetDirections}

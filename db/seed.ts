@@ -64,6 +64,7 @@ async function seed() {
         severity: "high",
         cause: "Lightning",
         perimeterCoordinates: JSON.stringify(generateCircleCoordinates(37.8651, -119.5383, acresAreaToRadius(1243))),
+        newsUrl: "https://www.nps.gov/yose/learn/news/wildfire.htm",
         updated: new Date()
       },
       {
