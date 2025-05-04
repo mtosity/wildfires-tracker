@@ -116,6 +116,11 @@ const Map: React.FC<MapProps> = ({
     };
   }, []);
 
+  // Get the current theme from the document class
+  const getThemeMode = () => {
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  };
+
   useEffect(() => {
     if (!mapboxgl.supported()) {
       console.error('Your browser does not support Mapbox GL');
@@ -126,8 +131,8 @@ const Map: React.FC<MapProps> = ({
     mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA';
 
     if (mapContainer.current && !map.current) {
-      // Determine if dark mode is active
-      const isDarkMode = document.documentElement.classList.contains('dark');
+      // Determine if dark mode is active - check both classes and localStorage
+      const isDarkMode = getThemeMode() === 'dark';
       
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
@@ -525,10 +530,56 @@ const Map: React.FC<MapProps> = ({
           mutation.attributeName === 'class' &&
           map.current
         ) {
-          const isDarkMode = document.documentElement.classList.contains('dark');
+          const isDarkMode = getThemeMode() === 'dark';
+          
+          // Update map style
           map.current.setStyle(
             isDarkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11'
           );
+          
+          // After style change, restore USA highlight and layers
+          map.current.once('style.load', () => {
+            if (map.current) {
+              try {
+                // Restore USA highlight
+                map.current.addLayer({
+                  id: 'non-usa-dim',
+                  type: 'background',
+                  paint: {
+                    'background-color': 'rgba(0, 0, 0, 0.15)'
+                  }
+                });
+                
+                map.current.addLayer({
+                  id: 'usa-highlight',
+                  type: 'fill',
+                  source: {
+                    type: 'geojson',
+                    data: {
+                      type: 'Feature',
+                      properties: {},
+                      geometry: {
+                        type: 'Polygon',
+                        coordinates: [[
+                          [usaBounds.west, usaBounds.south],
+                          [usaBounds.west, usaBounds.north],
+                          [usaBounds.east, usaBounds.north],
+                          [usaBounds.east, usaBounds.south],
+                          [usaBounds.west, usaBounds.south]
+                        ]]
+                      }
+                    }
+                  },
+                  paint: {
+                    'fill-color': 'transparent',
+                    'fill-opacity': 0
+                  }
+                }, 'non-usa-dim');
+              } catch (error) {
+                console.error("Error restoring USA highlight after style change:", error);
+              }
+            }
+          });
         }
       });
     });
@@ -541,7 +592,7 @@ const Map: React.FC<MapProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [mapLoaded]);
+  }, [mapLoaded, usaBounds]);
 
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
