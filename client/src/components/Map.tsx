@@ -176,11 +176,24 @@ const Map: React.FC<MapProps> = ({
               }
             }, 'non-usa-dim');
             
-            // Set initial bounding box to USA
-            map.current.fitBounds([
-              [usaBounds.west, usaBounds.south],
-              [usaBounds.east, usaBounds.north]
-            ], { padding: 20 });
+            // If user location is available, adjust view to show user location and part of USA
+            if (userLocation) {
+              // Calculate center point between user location and middle of USA
+              const usaCenter = [(usaBounds.west + usaBounds.east) / 2, (usaBounds.south + usaBounds.north) / 2];
+              const centerLng = (userLocation.longitude + usaCenter[0]) / 2;
+              const centerLat = (userLocation.latitude + usaCenter[1]) / 2;
+              
+              map.current.jumpTo({
+                center: [centerLng, centerLat],
+                zoom: 4  // Zoom level to show region
+              });
+            } else {
+              // Default to USA view if no user location
+              map.current.fitBounds([
+                [usaBounds.west, usaBounds.south],
+                [usaBounds.east, usaBounds.north]
+              ], { padding: 20 });
+            }
           } catch (error) {
             console.error("Error adding USA highlight:", error);
           }
@@ -219,14 +232,14 @@ const Map: React.FC<MapProps> = ({
         map.current = null;
       }
     };
-  }, [initialPosition, throttle]);
+  }, [initialPosition, throttle, userLocation]);
 
-  // Handle user location updates
+  // Handle user location updates - just add marker, no zooming
   useEffect(() => {
     if (map.current && userLocation && mapLoaded) {
-      // Add or update user location marker
+      // Create user marker container
       const el = document.createElement('div');
-      el.className = 'w-5 h-5 relative flex items-center justify-center';
+      el.className = 'w-8 h-8 relative flex items-center justify-center';
       
       // Add a pulsing effect
       const pulseRing = document.createElement('div');
@@ -235,7 +248,7 @@ const Map: React.FC<MapProps> = ({
       
       // Add the center marker dot
       const centerDot = document.createElement('div');
-      centerDot.className = 'absolute w-3 h-3 bg-blue-600 rounded-full border-2 border-white z-10';
+      centerDot.className = 'absolute w-4 h-4 bg-blue-600 rounded-full border-2 border-white z-10';
       el.appendChild(centerDot);
       
       // Create and add the user location marker
@@ -243,13 +256,7 @@ const Map: React.FC<MapProps> = ({
         .setLngLat([userLocation.longitude, userLocation.latitude])
         .addTo(map.current);
       
-      // Fly to user location with a wider zoom (to show part of the USA)
-      map.current.flyTo({
-        center: [userLocation.longitude, userLocation.latitude],
-        zoom: 5, // Zoom level that shows the user location and surrounding region
-        essential: true,
-        duration: 2000
-      });
+      // We don't zoom here - the initial map setup now handles this
     }
   }, [userLocation, mapLoaded]);
 
