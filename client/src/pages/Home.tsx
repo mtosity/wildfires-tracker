@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import SimpleMap from '@/components/SimpleMap';
+import Map from '@/components/Map';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import InfoBox from '@/components/InfoBox';
@@ -24,6 +24,7 @@ const Home = () => {
   const [activeView, setActiveView] = useState<'fires' | 'map' | 'airQuality'>('fires');
   const [mapBounds, setMapBounds] = useState<MapBounds | undefined>(undefined);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [mapInstance, setMapInstance] = useState<any>(null);
   
   const { toast } = useToast();
   const isMobile = useMobile();
@@ -84,27 +85,27 @@ const Home = () => {
   }, []);
   
   const handleZoomIn = useCallback(() => {
-    if (typeof window !== 'undefined' && (window as any).mapInstance) {
-      (window as any).mapInstance.zoomIn();
+    if (mapInstance) {
+      mapInstance.zoomIn();
     }
-  }, []);
+  }, [mapInstance]);
   
   const handleZoomOut = useCallback(() => {
-    if (typeof window !== 'undefined' && (window as any).mapInstance) {
-      (window as any).mapInstance.zoomOut();
+    if (mapInstance) {
+      mapInstance.zoomOut();
     }
-  }, []);
+  }, [mapInstance]);
   
   const handleLocateMe = useCallback(() => {
     getPosition();
     
-    if (position && typeof window !== 'undefined' && (window as any).mapInstance) {
-      (window as any).mapInstance.flyTo({
+    if (position && mapInstance) {
+      mapInstance.flyTo({
         center: [position.longitude, position.latitude],
-        zoom: 5  // Lower zoom to show more of the US around the user's location
+        zoom: 10
       });
     }
-  }, [getPosition, position]);
+  }, [getPosition, position, mapInstance]);
   
   const handleGetDirections = useCallback(() => {
     if (selectedWildfire) {
@@ -159,7 +160,7 @@ const Home = () => {
   return (
     <div className="h-screen w-full relative overflow-hidden">
       {/* Main Map */}
-      <SimpleMap
+      <Map
         wildfires={wildfires}
         onMapMove={handleMapMove}
         onWildfireSelect={handleWildfireSelect}

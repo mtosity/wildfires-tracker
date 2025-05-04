@@ -1,15 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Wildfire, MapPosition } from '@/types/wildfire';
-
-// USA Bounding Box - defined outside component
-const usaBounds = {
-  north: 49.5,  // Northern border with Canada
-  south: 24.5,  // Southern border with Mexico
-  west: -125.0, // Western coast
-  east: -66.0   // Eastern coast
-};
+import Supercluster from 'supercluster';
+import FireMarker from './FireMarker';
 
 interface MapProps {
   wildfires: Wildfire[];
@@ -19,6 +13,11 @@ interface MapProps {
   initialPosition?: MapPosition;
   userLocation?: { latitude: number; longitude: number } | null;
 }
+
+type PointFeature = GeoJSON.Feature<GeoJSON.Point, { 
+  id: string;
+  wildfire: Wildfire;
+}>;
 
 const Map: React.FC<MapProps> = ({
   wildfires,
@@ -31,14 +30,29 @@ const Map: React.FC<MapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
-  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const clusterMarkersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const perimeterLayersRef = useRef<{ [key: string]: boolean }>({});
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState<number>(4);
+  const [viewportBounds, setViewportBounds] = useState<mapboxgl.LngLatBounds | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([
+    initialPosition?.longitude || -98.5795,
+    initialPosition?.latitude || 39.8283
+  ]);
   
   // USA-focused position and bounds
   const defaultPosition = {
     latitude: 39.8283,
     longitude: -98.5795,
     zoom: 3.5
+  };
+  
+  // USA Bounding Box
+  const usaBounds = {
+    north: 49.5,  // Northern border with Canada
+    south: 24.5,  // Southern border with Mexico
+    west: -125.0, // Western coast
+    east: -66.0   // Eastern coast
   };
   
   // Convert wildfires to GeoJSON features for clustering
@@ -162,7 +176,7 @@ const Map: React.FC<MapProps> = ({
               }
             }, 'non-usa-dim');
             
-                  // Default to USA view initially - we'll adjust to user location later if available
+            // Set initial bounding box to USA
             map.current.fitBounds([
               [usaBounds.west, usaBounds.south],
               [usaBounds.east, usaBounds.north]
@@ -205,19 +219,14 @@ const Map: React.FC<MapProps> = ({
         map.current = null;
       }
     };
-  }, [initialPosition, throttle, userLocation]);
+  }, [initialPosition, throttle]);
 
-  // Handle user location updates with controlled zooming
+  // Handle user location updates
   useEffect(() => {
     if (map.current && userLocation && mapLoaded) {
-      // Clear any existing user location markers
-      if (userMarkerRef.current) {
-        userMarkerRef.current.remove();
-      }
-      
-      // Create user marker container
+      // Add or update user location marker
       const el = document.createElement('div');
-      el.className = 'w-8 h-8 relative flex items-center justify-center';
+      el.className = 'w-5 h-5 relative flex items-center justify-center';
       
       // Add a pulsing effect
       const pulseRing = document.createElement('div');
@@ -226,34 +235,23 @@ const Map: React.FC<MapProps> = ({
       
       // Add the center marker dot
       const centerDot = document.createElement('div');
-      centerDot.className = 'absolute w-4 h-4 bg-blue-600 rounded-full border-2 border-white z-10';
+      centerDot.className = 'absolute w-3 h-3 bg-blue-600 rounded-full border-2 border-white z-10';
       el.appendChild(centerDot);
       
       // Create and add the user location marker
-      const marker = new mapboxgl.Marker(el)
+      new mapboxgl.Marker(el)
         .setLngLat([userLocation.longitude, userLocation.latitude])
         .addTo(map.current);
       
-      // Store the marker reference
-      userMarkerRef.current = marker;
-      
-      // Fly to a position that shows both the user location and part of the USA
-      try {
-        // Use a custom fitBounds to ensure we show both the user and a portion of the USA
-        const usaCenter = [(usaBounds.west + usaBounds.east) / 2, (usaBounds.south + usaBounds.north) / 2];
-        
-        // Create a zoom level that shows both the user location and part of the USA
-        map.current.flyTo({
-          center: [userLocation.longitude, userLocation.latitude],
-          zoom: 5, // Mid-level zoom that shows regional context
-          duration: 2000,
-          essential: true
-        });
-      } catch (error) {
-        console.error("Error adjusting map to user location:", error);
-      }
+      // Fly to user location with a wider zoom (to show part of the USA)
+      map.current.flyTo({
+        center: [userLocation.longitude, userLocation.latitude],
+        zoom: 5, // Zoom level that shows the user location and surrounding region
+        essential: true,
+        duration: 2000
+      });
     }
-  }, [userLocation, mapLoaded, usaBounds]);
+  }, [userLocation, mapLoaded]);
 
   // Clear all markers
   const clearAllMarkers = useCallback(() => {
