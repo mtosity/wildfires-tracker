@@ -381,17 +381,60 @@ const Map: React.FC<MapProps> = ({
           markerEl.id = `marker-${wildfire.id}`;
           markerEl.className = 'marker-container';
           
-          // Style based on severity
-          const dotEl = document.createElement('div');
-          dotEl.className = 'rounded-full';
-          dotEl.style.width = '16px';
-          dotEl.style.height = '16px';
-          // Softer, easier-on-the-eyes colors
-          dotEl.style.backgroundColor = wildfire.severity === 'high' ? '#FF8A80' : 
-                                        wildfire.severity === 'medium' ? '#FFD180' : 
-                                        wildfire.severity === 'low' ? '#CCFF90' : '#B9F6CA';
+          // For active fires (containment < 100%), create a container with a pulsing effect
+          const isActive = wildfire.containment < 100 && wildfire.severity !== 'contained';
           
-          markerEl.appendChild(dotEl);
+          if (isActive) {
+            // Create a container for the pulsing effect
+            const containerEl = document.createElement('div');
+            containerEl.className = 'relative';
+            
+            // Create the pulse effect for active fires
+            const pulseEl = document.createElement('div');
+            pulseEl.className = 'absolute inset-0 rounded-full animate-ping opacity-75';
+            
+            // Use a more intense color for the pulse based on severity
+            pulseEl.style.backgroundColor = wildfire.severity === 'high' ? '#FF5252' : 
+                                            wildfire.severity === 'medium' ? '#FFC400' : 
+                                            '#AEEA00';
+            pulseEl.style.width = '16px';
+            pulseEl.style.height = '16px';
+            
+            containerEl.appendChild(pulseEl);
+            
+            // Style the main dot based on severity
+            const dotEl = document.createElement('div');
+            dotEl.className = 'rounded-full absolute z-10';
+            dotEl.style.width = '16px';
+            dotEl.style.height = '16px';
+            
+            // Softer, easier-on-the-eyes colors
+            dotEl.style.backgroundColor = wildfire.severity === 'high' ? '#FF8A80' : 
+                                          wildfire.severity === 'medium' ? '#FFD180' : 
+                                          wildfire.severity === 'low' ? '#CCFF90' : '#B9F6CA';
+            
+            containerEl.appendChild(dotEl);
+            markerEl.appendChild(containerEl);
+            
+            // Add a small label for the containment percentage
+            if (wildfire.containment > 0) {
+              const labelEl = document.createElement('div');
+              labelEl.className = 'absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-xs font-semibold bg-white/90 px-1 rounded-full shadow-sm';
+              labelEl.textContent = `${wildfire.containment}%`;
+              containerEl.appendChild(labelEl);
+            }
+          } else {
+            // Style based on severity for contained fires
+            const dotEl = document.createElement('div');
+            dotEl.className = 'rounded-full';
+            dotEl.style.width = '16px';
+            dotEl.style.height = '16px';
+            
+            // Use a more subdued color for contained fires
+            dotEl.style.backgroundColor = '#B9F6CA'; // Green for contained fires
+            
+            markerEl.appendChild(dotEl);
+          }
           
           // Create and store marker
           const marker = new mapboxgl.Marker({
