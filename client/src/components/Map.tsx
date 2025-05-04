@@ -419,18 +419,44 @@ const Map: React.FC<MapProps> = ({
     });
   }, []);
   
-  // Show perimeter for selected wildfire
+  // Hide all markers
+  const hideAllMarkers = useCallback(() => {
+    if (!map.current) return;
+    
+    Object.values(markersRef.current).forEach(marker => {
+      marker.getElement().style.display = 'none';
+    });
+  }, []);
+  
+  // Show all markers
+  const showAllMarkers = useCallback(() => {
+    if (!map.current) return;
+    
+    Object.values(markersRef.current).forEach(marker => {
+      marker.getElement().style.display = 'block';
+    });
+  }, []);
+  
+  // Show perimeter for selected wildfire and hide markers
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
     
     // First hide all perimeters
     hideAllPerimeters();
     
-    // If we have a selected wildfire with perimeter data, show it
-    if (selectedWildfire?.perimeterCoordinates) {
-      addPerimeterForWildfire(selectedWildfire);
+    if (selectedWildfire) {
+      // Hide all markers when a wildfire is selected to focus on perimeter
+      hideAllMarkers();
+      
+      // If we have perimeter data, show it
+      if (selectedWildfire.perimeterCoordinates) {
+        addPerimeterForWildfire(selectedWildfire);
+      }
+    } else {
+      // Show all markers when no wildfire is selected
+      showAllMarkers();
     }
-  }, [selectedWildfire, mapLoaded, addPerimeterForWildfire, hideAllPerimeters]);
+  }, [selectedWildfire, mapLoaded, addPerimeterForWildfire, hideAllPerimeters, hideAllMarkers, showAllMarkers]);
 
   // Fly to the selected wildfire
   useEffect(() => {

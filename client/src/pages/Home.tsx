@@ -189,13 +189,28 @@ const Home = () => {
       {/* Info Box */}
       <InfoBox stats={stats} />
       
-      {/* Toggle Sidebar Button */}
-      <div className="absolute bottom-4 right-4 z-10">
+      {/* Map Controls */}
+      <div className="absolute bottom-4 right-4 z-10 flex space-x-2">
+        {/* Clear Selection Button - Only show when a wildfire is selected */}
+        {selectedWildfire && (
+          <Button 
+            className="map-overlay p-3 flex items-center justify-center hover:bg-gray-100 transition-colors rounded-full shadow-md"
+            onClick={() => setSelectedWildfire(null)}
+            size="icon"
+            variant="ghost"
+            title="Clear selection"
+          >
+            <span className="material-icons">close</span>
+          </Button>
+        )}
+        
+        {/* Toggle Sidebar Button */}
         <Button 
           className="map-overlay p-3 flex items-center justify-center hover:bg-gray-100 transition-colors rounded-full shadow-md"
           onClick={() => setSidebarOpen(!sidebarOpen)}
           size="icon"
           variant="ghost"
+          title="Show wildfire list"
         >
           <span className="material-icons">format_list_bulleted</span>
         </Button>
