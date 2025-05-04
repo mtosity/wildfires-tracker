@@ -13,6 +13,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useWildfires, useWildfireStats, useActiveAlerts, useNearbyWildfires } from '@/hooks/useWildfireData';
 import { useMobile } from '@/hooks/use-mobile';
 import { Wildfire, Alert, MapBounds, WildfireStats } from '@/types/wildfire';
+import mapboxgl from 'mapbox-gl';
 import { useToast } from '@/hooks/use-toast';
 
 const Home = () => {
@@ -73,7 +74,7 @@ const Home = () => {
     }
   }, [isMobile]);
   
-  const handleMapMove = useCallback((bounds: any) => {
+  const handleMapMove = useCallback((bounds: mapboxgl.LngLatBounds) => {
     const newBounds: MapBounds = {
       north: bounds.getNorth(),
       south: bounds.getSouth(),
