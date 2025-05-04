@@ -181,26 +181,40 @@ const Home = () => {
     }
   }, [selectedWildfire, toast]);
   
+  // Check if a wildfire is active (not contained or 100% contained)
+  const isActiveWildfire = useCallback((wildfire: Wildfire): boolean => {
+    return wildfire.severity !== 'contained' && wildfire.containment < 100;
+  }, []);
+  
   const handleAlertClick = useCallback((alert: Alert) => {
     // Find the wildfire associated with this alert
     if (alert.wildfireId) {
       const relatedWildfire = wildfires.find(fire => fire.id === alert.wildfireId);
       
       if (relatedWildfire) {
-        // Select the wildfire
-        handleWildfireSelect(relatedWildfire);
-        
-        // Zoom to the wildfire location
-        if (mapInstance) {
-          mapInstance.flyTo({
-            center: [relatedWildfire.longitude, relatedWildfire.latitude],
-            zoom: 12,
-            essential: true
+        // Only select and zoom to the wildfire if it's active
+        if (isActiveWildfire(relatedWildfire)) {
+          // Select the wildfire
+          handleWildfireSelect(relatedWildfire);
+          
+          // Zoom to the wildfire location
+          if (mapInstance) {
+            mapInstance.flyTo({
+              center: [relatedWildfire.longitude, relatedWildfire.latitude],
+              zoom: 12,
+              essential: true
+            });
+          }
+        } else {
+          // Show a message that the wildfire is no longer active
+          toast({
+            title: "Wildfire Status",
+            description: `${relatedWildfire.name} is no longer active (${relatedWildfire.containment}% contained)`,
           });
         }
       }
     }
-  }, [wildfires, mapInstance, handleWildfireSelect]);
+  }, [wildfires, mapInstance, handleWildfireSelect, isActiveWildfire, toast]);
 
   return (
     <div className="h-screen w-full relative overflow-hidden">

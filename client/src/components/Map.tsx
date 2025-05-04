@@ -57,20 +57,27 @@ const Map: React.FC<MapProps> = ({
     east: -66.0   // Eastern coast
   };
   
-  // Convert wildfires to GeoJSON features for clustering
+  // Check if a wildfire is active (not contained or 100% contained)
+  const isActiveWildfire = useCallback((wildfire: Wildfire): boolean => {
+    return wildfire.severity !== 'contained' && wildfire.containment < 100;
+  }, []);
+  
+  // Convert only active wildfires to GeoJSON features for clustering
   const points = useMemo((): PointFeature[] => {
-    return wildfires.map(wildfire => ({
-      type: 'Feature',
-      properties: {
-        id: wildfire.id,
-        wildfire
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [wildfire.longitude, wildfire.latitude]
-      }
-    }));
-  }, [wildfires]);
+    return wildfires
+      .filter(isActiveWildfire)
+      .map(wildfire => ({
+        type: 'Feature',
+        properties: {
+          id: wildfire.id,
+          wildfire
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [wildfire.longitude, wildfire.latitude]
+        }
+      }));
+  }, [wildfires, isActiveWildfire]);
 
   // Create supercluster instance
   const supercluster = useMemo(() => {

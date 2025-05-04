@@ -27,7 +27,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     contained: false
   });
 
-  const filteredWildfires = wildfires.filter(wildfire => {
+  // Only show active wildfires (not contained and less than 100% containment)
+  const activeWildfires = wildfires.filter(wildfire => 
+    wildfire.severity !== 'contained' && wildfire.containment < 100
+  );
+
+  const filteredWildfires = activeWildfires.filter(wildfire => {
     const matchesSearch = wildfire.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          wildfire.location.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filters[wildfire.severity];
