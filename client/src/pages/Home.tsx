@@ -1,138 +1,161 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import Map from '@/components/Map';
-import Sidebar from '@/components/Sidebar';
-import Header from '@/components/Header';
-import InfoBox from '@/components/InfoBox';
-import MapControls from '@/components/MapControls';
-import ActionButtons from '@/components/ActionButtons';
-import AlertBanner from '@/components/AlertBanner';
-import FirePopup from '@/components/FirePopup';
-import MobileBottomSheet from '@/components/MobileBottomSheet';
-import { Button } from '@/components/ui/button';
-import { useGeolocation } from '@/hooks/useGeolocation';
-import { useWildfires, useWildfireStats, useActiveAlerts, useNearbyWildfires } from '@/hooks/useWildfireData';
-import { useMobile } from '@/hooks/use-mobile';
-import { Wildfire, Alert, MapBounds, WildfireStats } from '@/types/wildfire';
-import mapboxgl from 'mapbox-gl';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect, useCallback } from "react";
+import Map from "@/components/Map";
+import Sidebar from "@/components/Sidebar";
+import Header from "@/components/Header";
+import InfoBox from "@/components/InfoBox";
+import MapControls from "@/components/MapControls";
+import ActionButtons from "@/components/ActionButtons";
+import AlertBanner from "@/components/AlertBanner";
+import FirePopup from "@/components/FirePopup";
+import MobileBottomSheet from "@/components/MobileBottomSheet";
+import { Button } from "@/components/ui/button";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import {
+  useWildfires,
+  useWildfireStats,
+  useActiveAlerts,
+  useNearbyWildfires,
+} from "@/hooks/useWildfireData";
+import { useMobile } from "@/hooks/use-mobile";
+import { Wildfire, Alert, MapBounds, WildfireStats } from "@/types/wildfire";
+import mapboxgl from "mapbox-gl";
+import { useToast } from "@/hooks/use-toast";
 
 const Home = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedWildfire, setSelectedWildfire] = useState<Wildfire | null>(null);
+  const [selectedWildfire, setSelectedWildfire] = useState<Wildfire | null>(
+    null,
+  );
   const [popupOpen, setPopupOpen] = useState(false);
   const [mobileBottomSheetOpen, setMobileBottomSheetOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'fires' | 'map' | 'airQuality'>('fires');
+  const [activeView, setActiveView] = useState<"fires" | "map" | "airQuality">(
+    "fires",
+  );
   const [mapBounds, setMapBounds] = useState<MapBounds | undefined>(undefined);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
   const [mapInstance, setMapInstance] = useState<any>(null);
-  
+
   const { toast } = useToast();
   const isMobile = useMobile();
-  const { position, error: geoError, loading: geoLoading, getPosition } = useGeolocation();
-  
+  const {
+    position,
+    error: geoError,
+    loading: geoLoading,
+    getPosition,
+  } = useGeolocation();
+
   // Fetch wildfires data
   const { data: wildfiresData } = useWildfires(mapBounds);
   const { data: statsData } = useWildfireStats();
   const { data: alertsData } = useActiveAlerts();
   const { data: nearbyData } = useNearbyWildfires(
     position?.latitude || null,
-    position?.longitude || null
+    position?.longitude || null,
   );
-  
+
   const wildfires: Wildfire[] = wildfiresData?.wildfires || [];
-  const stats: WildfireStats = statsData?.stats || { 
-    activeFiresCount: 0, 
-    totalAcresBurning: 0, 
-    nearbyFiresCount: 0 
+  const stats: WildfireStats = statsData?.stats || {
+    activeFiresCount: 0,
+    totalAcresBurning: 0,
+    nearbyFiresCount: 0,
   };
   const alerts: Alert[] = alertsData?.alerts || [];
-  
+
   // Active alerts (filtered by dismissed)
-  const activeAlerts = alerts.filter(alert => !dismissedAlerts.includes(alert.id));
-  
+  const activeAlerts = alerts.filter(
+    (alert) => !dismissedAlerts.includes(alert.id),
+  );
+
   useEffect(() => {
     if (geoError) {
       toast({
         title: "Location Error",
         description: geoError,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   }, [geoError, toast]);
-  
-  const handleWildfireSelect = useCallback((wildfire: Wildfire | null) => {
-    setSelectedWildfire(wildfire);
-    
-    if (wildfire) {
-      setPopupOpen(true);
-      if (isMobile) {
-        setMobileBottomSheetOpen(true);
+
+  const handleWildfireSelect = useCallback(
+    (wildfire: Wildfire | null) => {
+      setSelectedWildfire(wildfire);
+
+      if (wildfire) {
+        setPopupOpen(true);
+        if (isMobile) {
+          setMobileBottomSheetOpen(true);
+        }
+      } else {
+        setPopupOpen(false);
+        setMobileBottomSheetOpen(false);
       }
-    } else {
-      setPopupOpen(false);
-      setMobileBottomSheetOpen(false);
-    }
-  }, [isMobile]);
-  
+    },
+    [isMobile],
+  );
+
   const handleMapMove = useCallback((bounds: mapboxgl.LngLatBounds) => {
     const newBounds: MapBounds = {
       north: bounds.getNorth(),
       south: bounds.getSouth(),
       east: bounds.getEast(),
-      west: bounds.getWest()
+      west: bounds.getWest(),
     };
     setMapBounds(newBounds);
   }, []);
-  
+
   const handleZoomIn = useCallback(() => {
     if (mapInstance) {
       mapInstance.zoomIn();
     }
   }, [mapInstance]);
-  
+
   const handleZoomOut = useCallback(() => {
     if (mapInstance) {
       mapInstance.zoomOut();
     }
   }, [mapInstance]);
-  
+
   const handleLocateMe = useCallback(() => {
     getPosition();
-    
+
     if (position && mapInstance) {
       mapInstance.flyTo({
         center: [position.longitude, position.latitude],
-        zoom: 10
+        zoom: 10,
       });
     }
   }, [getPosition, position, mapInstance]);
-  
+
   const handleGetDirections = useCallback(() => {
     if (selectedWildfire) {
       const { latitude, longitude, name } = selectedWildfire;
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&destination_place_id=${encodeURIComponent(name)}`, '_blank');
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&destination_place_id=${encodeURIComponent(name)}`,
+        "_blank",
+      );
     }
   }, [selectedWildfire]);
-  
+
   const handleShareWildfire = useCallback(() => {
     if (selectedWildfire) {
       const shareText = `Check out the ${selectedWildfire.name} wildfire: ${window.location.origin}?fire=${selectedWildfire.id}`;
-      
+
       if (navigator.share) {
-        navigator.share({
-          title: 'FireTracker',
-          text: shareText,
-          url: window.location.href
-        })
-        .catch(err => {
-          console.error('Share failed:', err);
-          // Fallback - copy to clipboard
-          navigator.clipboard.writeText(shareText);
-          toast({
-            title: "Link Copied",
-            description: "Wildfire information copied to clipboard",
+        navigator
+          .share({
+            title: "FireTracker",
+            text: shareText,
+            url: window.location.href,
+          })
+          .catch((err) => {
+            console.error("Share failed:", err);
+            // Fallback - copy to clipboard
+            navigator.clipboard.writeText(shareText);
+            toast({
+              title: "Link Copied",
+              description: "Wildfire information copied to clipboard",
+            });
           });
-        });
       } else {
         // Fallback - copy to clipboard
         navigator.clipboard.writeText(shareText);
@@ -143,11 +166,11 @@ const Home = () => {
       }
     }
   }, [selectedWildfire, toast]);
-  
+
   const handleDismissAlert = useCallback((alertId: string) => {
-    setDismissedAlerts(prev => [...prev, alertId]);
+    setDismissedAlerts((prev) => [...prev, alertId]);
   }, []);
-  
+
   const handleSubscribeToAlerts = useCallback(() => {
     if (selectedWildfire) {
       toast({
@@ -156,7 +179,7 @@ const Home = () => {
       });
     }
   }, [selectedWildfire, toast]);
-  
+
   return (
     <div className="h-screen w-full relative overflow-hidden">
       {/* Main Map */}
@@ -167,10 +190,10 @@ const Home = () => {
         selectedWildfire={selectedWildfire}
         userLocation={position}
       />
-      
+
       {/* Header */}
       <Header title="FireTracker" />
-      
+
       {/* Map Controls */}
       <MapControls
         onZoomIn={handleZoomIn}
@@ -178,22 +201,15 @@ const Home = () => {
         onLocateMe={handleLocateMe}
         isLocating={geoLoading}
       />
-      
-      {/* Action Buttons */}
-      <ActionButtons
-        activeView={activeView}
-        onViewChange={setActiveView}
-        onFilterToggle={() => setSidebarOpen(true)}
-      />
-      
+
       {/* Info Box */}
       <InfoBox stats={stats} />
-      
+
       {/* Map Controls */}
       <div className="absolute bottom-4 right-4 z-10 flex space-x-2">
         {/* Clear Selection Button - Only show when a wildfire is selected */}
         {selectedWildfire && (
-          <Button 
+          <Button
             className="map-overlay p-2 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors rounded-full shadow-md"
             onClick={() => setSelectedWildfire(null)}
             size="sm"
@@ -203,9 +219,9 @@ const Home = () => {
             <span className="material-icons text-sm">close</span>
           </Button>
         )}
-        
+
         {/* Toggle Sidebar Button */}
-        <Button 
+        <Button
           className="map-overlay p-2 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors rounded-full shadow-md"
           onClick={() => setSidebarOpen(!sidebarOpen)}
           size="sm"
@@ -215,7 +231,7 @@ const Home = () => {
           <span className="material-icons text-sm">format_list_bulleted</span>
         </Button>
       </div>
-      
+
       {/* Sidebar */}
       <Sidebar
         wildfires={wildfires}
@@ -224,7 +240,7 @@ const Home = () => {
         onWildfireSelect={handleWildfireSelect}
         selectedWildfire={selectedWildfire}
       />
-      
+
       {/* Fire Popup */}
       {selectedWildfire && popupOpen && (
         <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
@@ -241,7 +257,7 @@ const Home = () => {
           />
         </div>
       )}
-      
+
       {/* Mobile Bottom Sheet */}
       <MobileBottomSheet
         wildfire={selectedWildfire}
@@ -253,7 +269,7 @@ const Home = () => {
         onGetDirections={handleGetDirections}
         onShare={handleShareWildfire}
       />
-      
+
       {/* Alert Banner */}
       {activeAlerts.length > 0 && (
         <AlertBanner
