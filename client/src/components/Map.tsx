@@ -5,6 +5,14 @@ import { Wildfire, MapPosition } from '@/types/wildfire';
 import Supercluster from 'supercluster';
 import FireMarker from './FireMarker';
 
+// USA Bounding Box - define it outside component for global usage
+const usaBounds = {
+  north: 49.5,  // Northern border with Canada
+  south: 24.5,  // Southern border with Mexico
+  west: -125.0, // Western coast
+  east: -66.0   // Eastern coast
+};
+
 interface MapProps {
   wildfires: Wildfire[];
   onMapMove?: (bounds: mapboxgl.LngLatBounds) => void;
@@ -46,14 +54,6 @@ const Map: React.FC<MapProps> = ({
     latitude: 39.8283,
     longitude: -98.5795,
     zoom: 3.5
-  };
-  
-  // USA Bounding Box
-  const usaBounds = {
-    north: 49.5,  // Northern border with Canada
-    south: 24.5,  // Southern border with Mexico
-    west: -125.0, // Western coast
-    east: -66.0   // Eastern coast
   };
   
   // Convert wildfires to GeoJSON features for clustering
