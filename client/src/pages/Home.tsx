@@ -211,7 +211,7 @@ const Home = () => {
         {/* Clear Selection Button - Only show when a wildfire is selected */}
         {selectedWildfire && (
           <Button
-            className="map-overlay p-2 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors rounded-full shadow-md"
+            className="map-overlay p-2 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded-full shadow-md"
             onClick={() => setSelectedWildfire(null)}
             size="sm"
             variant="ghost"
@@ -228,7 +228,7 @@ const Home = () => {
 
         {/* Toggle Sidebar Button */}
         <Button
-          className="map-overlay p-2 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors rounded-full shadow-md"
+          className="map-overlay p-2 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded-full shadow-md"
           onClick={() => setSidebarOpen(!sidebarOpen)}
           size="sm"
           variant="ghost"
