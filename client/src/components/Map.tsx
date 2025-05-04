@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Wildfire, MapPosition } from '@/types/wildfire';
-import Supercluster from 'supercluster';
 
-// USA Bounding Box
+// USA Bounding Box - defined outside component
 const usaBounds = {
   north: 49.5,  // Northern border with Canada
   south: 24.5,  // Southern border with Mexico
@@ -21,11 +20,6 @@ interface MapProps {
   userLocation?: { latitude: number; longitude: number } | null;
 }
 
-type PointFeature = GeoJSON.Feature<GeoJSON.Point, { 
-  id: string;
-  wildfire: Wildfire;
-}>;
-
 const Map: React.FC<MapProps> = ({
   wildfires,
   onMapMove,
@@ -37,16 +31,8 @@ const Map: React.FC<MapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
-  const clusterMarkersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
-  const perimeterLayersRef = useRef<{ [key: string]: boolean }>({});
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [currentZoom, setCurrentZoom] = useState<number>(4);
-  const [viewportBounds, setViewportBounds] = useState<mapboxgl.LngLatBounds | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([
-    initialPosition?.longitude || -98.5795,
-    initialPosition?.latitude || 39.8283
-  ]);
   
   // USA-focused position and bounds
   const defaultPosition = {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Map from '@/components/Map';
+import SimpleMap from '@/components/SimpleMap';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import InfoBox from '@/components/InfoBox';
@@ -24,7 +24,6 @@ const Home = () => {
   const [activeView, setActiveView] = useState<'fires' | 'map' | 'airQuality'>('fires');
   const [mapBounds, setMapBounds] = useState<MapBounds | undefined>(undefined);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
-  const [mapInstance, setMapInstance] = useState<any>(null);
   
   const { toast } = useToast();
   const isMobile = useMobile();
@@ -85,27 +84,27 @@ const Home = () => {
   }, []);
   
   const handleZoomIn = useCallback(() => {
-    if (mapInstance) {
-      mapInstance.zoomIn();
+    if (typeof window !== 'undefined' && (window as any).mapInstance) {
+      (window as any).mapInstance.zoomIn();
     }
-  }, [mapInstance]);
+  }, []);
   
   const handleZoomOut = useCallback(() => {
-    if (mapInstance) {
-      mapInstance.zoomOut();
+    if (typeof window !== 'undefined' && (window as any).mapInstance) {
+      (window as any).mapInstance.zoomOut();
     }
-  }, [mapInstance]);
+  }, []);
   
   const handleLocateMe = useCallback(() => {
     getPosition();
     
-    if (position && mapInstance) {
-      mapInstance.flyTo({
+    if (position && typeof window !== 'undefined' && (window as any).mapInstance) {
+      (window as any).mapInstance.flyTo({
         center: [position.longitude, position.latitude],
         zoom: 10
       });
     }
-  }, [getPosition, position, mapInstance]);
+  }, [getPosition, position]);
   
   const handleGetDirections = useCallback(() => {
     if (selectedWildfire) {
@@ -160,7 +159,7 @@ const Home = () => {
   return (
     <div className="h-screen w-full relative overflow-hidden">
       {/* Main Map */}
-      <Map
+      <SimpleMap
         wildfires={wildfires}
         onMapMove={handleMapMove}
         onWildfireSelect={handleWildfireSelect}
