@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Map from "@/components/Map";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
@@ -177,8 +177,20 @@ const Home = () => {
     setDismissedAlerts((prev) => [...prev, alertId]);
   }, []);
   
-  // Using a state variable instead of a ref to handle alert click
+  // Using a state variable for alert-triggered navigation
   const [alertTargetWildfire, setAlertTargetWildfire] = useState<Wildfire | null>(null);
+  
+  // Create a separate timeout ref to handle navigation timing
+  const alertTimeoutRef = useRef<number | null>(null);
+  
+  // Update useEffect cleanup for the timeout
+  useEffect(() => {
+    return () => {
+      if (alertTimeoutRef.current) {
+        window.clearTimeout(alertTimeoutRef.current);
+      }
+    };
+  }, []);
   
   const handleAlertClick = useCallback((alert: Alert) => {
     // Check if the alert is associated with a wildfire
@@ -187,12 +199,29 @@ const Home = () => {
       const relatedWildfire = wildfires.find(fire => fire.id === alert.wildfireId);
       
       if (relatedWildfire) {
-        // Select the wildfire and zoom to it
+        // First, select the wildfire to show its details
         handleWildfireSelect(relatedWildfire);
         
-        // Set this as our target wildfire to focus on - this will cause
-        // our Map component to get new props and re-center
-        setAlertTargetWildfire(relatedWildfire);
+        // Clear any existing timeouts
+        if (alertTimeoutRef.current) {
+          window.clearTimeout(alertTimeoutRef.current);
+        }
+        
+        // Use a short timeout to let the UI update before flying to location
+        // This prevents the map from flashing or resetting during navigation
+        alertTimeoutRef.current = window.setTimeout(() => {
+          // Navigate the map to the wildfire's location using the stored window.mapInstance
+          if (window.mapInstance) {
+            window.mapInstance.flyTo({
+              center: [relatedWildfire.longitude, relatedWildfire.latitude],
+              zoom: 12,
+              essential: true,
+              duration: 1500
+            });
+          }
+          // Also update the state to ensure initialPosition is set for the Map component
+          setAlertTargetWildfire(relatedWildfire);
+        }, 100);
       }
     }
   }, [wildfires, handleWildfireSelect]);

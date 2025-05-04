@@ -136,6 +136,10 @@ const Map: React.FC<MapProps> = ({
     return 'light';
   };
 
+  // Keep track of initial map setup to prevent re-initialization
+  const [isMapInitialized, setIsMapInitialized] = useState(false);
+
+  // Initialize map once
   useEffect(() => {
     if (!mapboxgl.supported()) {
       console.error('Your browser does not support Mapbox GL');
@@ -145,7 +149,7 @@ const Map: React.FC<MapProps> = ({
     // Use a public token if not provided via environment variables
     mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA';
 
-    if (mapContainer.current && !map.current) {
+    if (mapContainer.current && !map.current && !isMapInitialized) {
       // Determine if dark mode is active - check both classes and localStorage
       const isDarkMode = getThemeMode() === 'dark';
       
@@ -161,6 +165,8 @@ const Map: React.FC<MapProps> = ({
 
       map.current.on('load', () => {
         setMapLoaded(true);
+        setIsMapInitialized(true);
+        
         if (map.current) {
           // Add USA boundary highlight
           try {
@@ -241,9 +247,23 @@ const Map: React.FC<MapProps> = ({
       if (map.current) {
         map.current.remove();
         map.current = null;
+        setIsMapInitialized(false);
       }
     };
-  }, [initialPosition, throttle, onMapMove]);
+  }, [isMapInitialized, throttle, onMapMove]);
+  
+  // Handle initial position updates without reinitializing the map
+  useEffect(() => {
+    if (map.current && mapLoaded && initialPosition) {
+      // Use flyTo for smooth transition when position changes
+      map.current.flyTo({
+        center: [initialPosition.longitude, initialPosition.latitude],
+        zoom: initialPosition.zoom,
+        essential: true,
+        duration: 1500  // 1.5 seconds for smoother transition
+      });
+    }
+  }, [initialPosition, mapLoaded]);
 
   // Handle user location updates
   useEffect(() => {
@@ -565,6 +585,13 @@ const Map: React.FC<MapProps> = ({
   React.useEffect(() => {
     // Make the map methods available to the parent through window.mapInstance
     if (map.current && mapLoaded) {
+      const getBoundsFunction = () => {
+        if (map.current) {
+          return map.current.getBounds();
+        }
+        return undefined;
+      };
+      
       window.mapInstance = {
         flyTo: (options: { center: [number, number]; zoom: number; essential?: boolean; duration?: number }) => {
           if (map.current) {
@@ -581,12 +608,7 @@ const Map: React.FC<MapProps> = ({
             map.current.zoomOut();
           }
         },
-        getBounds: () => {
-          if (map.current) {
-            return map.current.getBounds();
-          }
-          return undefined;
-        }
+        getBounds: getBoundsFunction
       };
     }
     
