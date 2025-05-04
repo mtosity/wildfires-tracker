@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Wildfire, MapPosition } from '@/types/wildfire';
+import Supercluster from 'supercluster';
 import FireMarker from './FireMarker';
-import { createPortal } from 'react-dom';
 
 interface MapProps {
   wildfires: Wildfire[];
@@ -13,6 +13,11 @@ interface MapProps {
   initialPosition?: MapPosition;
   userLocation?: { latitude: number; longitude: number } | null;
 }
+
+type PointFeature = GeoJSON.Feature<GeoJSON.Point, { 
+  id: string;
+  wildfire: Wildfire;
+}>;
 
 const Map: React.FC<MapProps> = ({
   wildfires,
@@ -25,15 +30,77 @@ const Map: React.FC<MapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const clusterMarkersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const perimeterLayersRef = useRef<{ [key: string]: boolean }>({});
   const [mapLoaded, setMapLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState<number>(4);
-
+  const [viewportBounds, setViewportBounds] = useState<mapboxgl.LngLatBounds | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([
+    initialPosition?.longitude || -98.5795,
+    initialPosition?.latitude || 39.8283
+  ]);
+  
   const defaultPosition = {
     latitude: 39.8283,
     longitude: -98.5795,
     zoom: 4
   };
+  
+  // Convert wildfires to GeoJSON features for clustering
+  const points = useMemo((): PointFeature[] => {
+    return wildfires.map(wildfire => ({
+      type: 'Feature',
+      properties: {
+        id: wildfire.id,
+        wildfire
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [wildfire.longitude, wildfire.latitude]
+      }
+    }));
+  }, [wildfires]);
+
+  // Create supercluster instance
+  const supercluster = useMemo(() => {
+    const instance = new Supercluster({
+      radius: 60,
+      maxZoom: 16,
+      minPoints: 3
+    });
+    
+    if (points.length > 0) {
+      instance.load(points);
+    }
+    
+    return instance;
+  }, [points]);
+  
+  // Get clusters based on current map view
+  const clusters = useMemo(() => {
+    if (!viewportBounds || !mapLoaded) return [];
+    
+    const bbox: [number, number, number, number] = [
+      viewportBounds.getWest(),
+      viewportBounds.getSouth(),
+      viewportBounds.getEast(),
+      viewportBounds.getNorth()
+    ];
+    
+    return supercluster.getClusters(bbox, Math.floor(currentZoom));
+  }, [supercluster, viewportBounds, currentZoom, mapLoaded]);
+  
+  // Throttle function for performance
+  const throttle = useCallback((func: Function, limit: number) => {
+    let inThrottle: boolean = false;
+    return function(this: any, ...args: any[]) {
+      if (!inThrottle) {
+        func.apply(this, args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!mapboxgl.supported()) {
@@ -54,18 +121,26 @@ const Map: React.FC<MapProps> = ({
 
       map.current.on('load', () => {
         setMapLoaded(true);
-      });
-
-      map.current.on('moveend', () => {
-        if (map.current && onMapMove) {
-          const bounds = map.current.getBounds();
-          if (bounds) {
-            onMapMove(bounds);
-          }
+        if (map.current) {
+          setViewportBounds(map.current.getBounds());
         }
       });
+
+      // Use throttled events for better performance
+      const handleMapMove = throttle(() => {
+        if (map.current) {
+          setCurrentZoom(map.current.getZoom());
+          setMapCenter([map.current.getCenter().lng, map.current.getCenter().lat]);
+          setViewportBounds(map.current.getBounds());
+          
+          if (onMapMove) {
+            onMapMove(map.current.getBounds());
+          }
+        }
+      }, 100);
       
-      // Track zoom level changes
+      map.current.on('moveend', handleMapMove);
+      map.current.on('zoomend', handleMapMove);
       map.current.on('zoom', () => {
         if (map.current) {
           setCurrentZoom(map.current.getZoom());
@@ -79,7 +154,7 @@ const Map: React.FC<MapProps> = ({
         map.current = null;
       }
     };
-  }, []);
+  }, [initialPosition, throttle]);
 
   // Handle user location updates
   useEffect(() => {
@@ -94,79 +169,105 @@ const Map: React.FC<MapProps> = ({
     }
   }, [userLocation, mapLoaded]);
 
-  // Handle wildfire data updates
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return;
-
-    console.log("Rendering wildfires on map:", wildfires.length);
-
-    // Remove markers that no longer exist in the data
-    Object.keys(markersRef.current).forEach(id => {
-      if (!wildfires.find(w => w.id === id)) {
-        markersRef.current[id].remove();
-        delete markersRef.current[id];
-      }
+  // Clear all markers
+  const clearAllMarkers = useCallback(() => {
+    Object.values(markersRef.current).forEach(marker => {
+      marker.remove();
     });
+    markersRef.current = {};
 
-    // Add or update markers
-    wildfires.forEach(wildfire => {
-      console.log("Processing wildfire:", wildfire.id, wildfire.name);
+    Object.values(clusterMarkersRef.current).forEach(marker => {
+      marker.remove();
+    });
+    clusterMarkersRef.current = {};
+  }, []);
+
+  // Handle clusters and markers
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !viewportBounds) return;
+
+    console.log("Rendering map with clusters:", clusters.length);
+    
+    // Clear old markers for better performance
+    clearAllMarkers();
+    
+    // Add new clusters and markers
+    clusters.forEach(cluster => {
+      // Get cluster coordinates
+      const [longitude, latitude] = cluster.geometry.coordinates;
       
-      if (!markersRef.current[wildfire.id]) {
-        // Create marker element
-        const markerEl = document.createElement('div');
-        markerEl.id = `marker-${wildfire.id}`;
-        markerEl.className = 'marker-container';
+      // Check if it's a cluster or a single point
+      if (cluster.properties.cluster) {
+        // It's a cluster
+        const clusterId = `cluster-${cluster.properties.cluster_id}`;
+        const pointCount = cluster.properties.point_count;
         
-        // Add a simple marker style to directly see if markers are being added
-        markerEl.style.width = '20px';
-        markerEl.style.height = '20px';
-        markerEl.style.borderRadius = '50%';
-        markerEl.style.backgroundColor = wildfire.severity === 'high' ? '#D32F2F' : 
-                                       wildfire.severity === 'medium' ? '#FFA000' : 
-                                       wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
+        // Create cluster marker element
+        const el = document.createElement('div');
+        el.className = 'flex items-center justify-center';
         
-        document.body.appendChild(markerEl);
-
-        // Create the marker
-        const marker = new mapboxgl.Marker({
-          element: markerEl,
-          anchor: 'center'
-        })
-          .setLngLat([wildfire.longitude, wildfire.latitude])
-          .addTo(map.current!);
-
-        // Add click handler
-        markerEl.addEventListener('click', () => {
-          if (onWildfireSelect) {
-            onWildfireSelect(wildfire);
-          }
+        // Adjust size based on point count
+        const size = Math.min(55, Math.max(35, 35 + Math.log10(pointCount) * 10));
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+        
+        // Create inner circle
+        const innerCircle = document.createElement('div');
+        innerCircle.className = 'bg-primary/90 text-white rounded-full flex items-center justify-center font-bold shadow-md w-full h-full';
+        innerCircle.style.fontSize = `${Math.max(12, Math.min(18, 12 + Math.log10(pointCount) * 3))}px`;
+        innerCircle.innerText = pointCount.toString();
+        el.appendChild(innerCircle);
+        
+        // Add click handler to expand cluster
+        el.addEventListener('click', () => {
+          const expansionZoom = Math.min(
+            supercluster.getClusterExpansionZoom(cluster.properties.cluster_id),
+            16
+          );
+          map.current?.flyTo({
+            center: [longitude, latitude],
+            zoom: expansionZoom,
+            essential: true
+          });
         });
-
-        markersRef.current[wildfire.id] = marker;
         
-        console.log("Added marker for wildfire:", wildfire.id);
+        // Create and store marker
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([longitude, latitude])
+          .addTo(map.current!);
+        
+        clusterMarkersRef.current[clusterId] = marker;
       } else {
-        // Update marker position if needed
-        markersRef.current[wildfire.id].setLngLat([wildfire.longitude, wildfire.latitude]);
-      }
-
-      // Render React component into marker element
-      const markerEl = document.getElementById(`marker-${wildfire.id}`);
-      if (markerEl) {
-        const isSelected = selectedWildfire?.id === wildfire.id;
-        try {
-          // Create simple content directly instead of using createPortal
-          markerEl.innerHTML = '';
-          const dotEl = document.createElement('div');
-          dotEl.className = `w-4 h-4 rounded-full ${
-            wildfire.severity === 'high' ? 'bg-[#D32F2F]' :
-            wildfire.severity === 'medium' ? 'bg-[#FFA000]' :
-            wildfire.severity === 'low' ? 'bg-[#689F38]' : 'bg-[#2E7D32]'
-          }`;
+        // It's a single point
+        const wildfire = cluster.properties.wildfire;
+        
+        // Only render if wildfire is in current viewport (virtualization)
+        if (
+          wildfire.longitude >= viewportBounds.getWest() &&
+          wildfire.longitude <= viewportBounds.getEast() &&
+          wildfire.latitude >= viewportBounds.getSouth() &&
+          wildfire.latitude <= viewportBounds.getNorth()
+        ) {
+          // Create marker element
+          const markerEl = document.createElement('div');
+          markerEl.id = `marker-${wildfire.id}`;
+          markerEl.className = 'marker-container';
           
+          // Style based on severity
+          const dotEl = document.createElement('div');
+          dotEl.className = 'rounded-full';
+          dotEl.style.width = '16px';
+          dotEl.style.height = '16px';
+          dotEl.style.backgroundColor = wildfire.severity === 'high' ? '#D32F2F' : 
+                                        wildfire.severity === 'medium' ? '#FFA000' : 
+                                        wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
+          
+          // Add selection styling
+          const isSelected = selectedWildfire?.id === wildfire.id;
           if (isSelected) {
             dotEl.style.transform = 'scale(1.5)';
+            dotEl.style.boxShadow = '0 0 0 2px white, 0 0 0 4px #0288D1';
+            
             const labelEl = document.createElement('div');
             labelEl.className = 'text-xs font-medium bg-white px-1 py-0.5 rounded shadow-sm mt-1 whitespace-nowrap';
             labelEl.innerText = wildfire.name;
@@ -174,12 +275,27 @@ const Map: React.FC<MapProps> = ({
           }
           
           markerEl.appendChild(dotEl);
-        } catch (error) {
-          console.error("Error rendering marker:", error);
+          
+          // Create and store marker
+          const marker = new mapboxgl.Marker({
+            element: markerEl,
+            anchor: 'center'
+          })
+            .setLngLat([wildfire.longitude, wildfire.latitude])
+            .addTo(map.current!);
+          
+          // Add click handler
+          markerEl.addEventListener('click', () => {
+            if (onWildfireSelect) {
+              onWildfireSelect(wildfire);
+            }
+          });
+          
+          markersRef.current[wildfire.id] = marker;
         }
       }
     });
-  }, [wildfires, selectedWildfire, mapLoaded, onWildfireSelect]);
+  }, [clusters, selectedWildfire, mapLoaded, onWildfireSelect, viewportBounds, supercluster, clearAllMarkers]);
 
   // Handle fire perimeter rendering based on zoom level
   useEffect(() => {
