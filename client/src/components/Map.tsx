@@ -253,15 +253,29 @@ const Map: React.FC<MapProps> = ({
   }, [isMapInitialized, throttle, onMapMove]);
   
   // Handle initial position updates without reinitializing the map
+  // Store the previous position to avoid unnecessary updates
+  const prevPositionRef = useRef<MapPosition | undefined>(undefined);
+  
   useEffect(() => {
+    // Only update if position has actually changed and map is ready
     if (map.current && mapLoaded && initialPosition) {
-      // Use flyTo for smooth transition when position changes
-      map.current.flyTo({
-        center: [initialPosition.longitude, initialPosition.latitude],
-        zoom: initialPosition.zoom,
-        essential: true,
-        duration: 1500  // 1.5 seconds for smoother transition
-      });
+      // Stringify positions to compare actual values, not object references
+      const currentPosString = JSON.stringify(initialPosition);
+      const prevPosString = prevPositionRef.current ? JSON.stringify(prevPositionRef.current) : '';
+      
+      // Only fly to position if it's different from previous position
+      if (currentPosString !== prevPosString) {
+        // Store the new position for future comparison
+        prevPositionRef.current = initialPosition;
+        
+        // Use flyTo for smooth transition when position changes
+        map.current.flyTo({
+          center: [initialPosition.longitude, initialPosition.latitude],
+          zoom: initialPosition.zoom,
+          essential: true,
+          duration: 1500  // 1.5 seconds for smoother transition
+        });
+      }
     }
   }, [initialPosition, mapLoaded]);
 
