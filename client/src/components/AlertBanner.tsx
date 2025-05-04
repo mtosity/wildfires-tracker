@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 interface AlertBannerProps {
   alert: Alert;
   onClose: () => void;
+  onAlertClick?: () => void;
 }
 
-const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onClose }) => {
+const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onClose, onAlertClick }) => {
   const getBgColor = (severity: string) => {
     switch (severity) {
       case 'high':
@@ -34,9 +35,21 @@ const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onClose }) => {
     }
   };
 
+  const handleContentClick = (e: React.MouseEvent) => {
+    // Prevent the click event from bubbling up to parent elements
+    e.stopPropagation();
+    if (onAlertClick) {
+      onAlertClick();
+    }
+  };
+
   return (
     <div className={`absolute top-20 left-4 right-4 z-20 map-overlay p-3 border-l-4 ${getBgColor(alert.severity)} flex items-center justify-between`}>
-      <div className="flex items-center">
+      <div 
+        className="flex items-center flex-grow cursor-pointer" 
+        onClick={handleContentClick}
+        title="Click to view on map"
+      >
         <span className={`material-icons ${getTextColor(alert.severity)} mr-2`}>warning</span>
         <div>
           <p className={`font-medium ${getTextColor(alert.severity)}`}>{alert.title}</p>
@@ -46,8 +59,11 @@ const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onClose }) => {
       <Button
         variant="ghost"
         size="icon"
-        className="text-gray-500 hover:text-gray-700 h-6 w-6"
-        onClick={onClose}
+        className="text-gray-500 hover:text-gray-700 h-6 w-6 ml-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
       >
         <span className="material-icons">close</span>
       </Button>

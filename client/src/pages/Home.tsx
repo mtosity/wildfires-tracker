@@ -180,6 +180,27 @@ const Home = () => {
       });
     }
   }, [selectedWildfire, toast]);
+  
+  const handleAlertClick = useCallback((alert: Alert) => {
+    // Find the wildfire associated with this alert
+    if (alert.wildfireId) {
+      const relatedWildfire = wildfires.find(fire => fire.id === alert.wildfireId);
+      
+      if (relatedWildfire) {
+        // Select the wildfire
+        handleWildfireSelect(relatedWildfire);
+        
+        // Zoom to the wildfire location
+        if (mapInstance) {
+          mapInstance.flyTo({
+            center: [relatedWildfire.longitude, relatedWildfire.latitude],
+            zoom: 12,
+            essential: true
+          });
+        }
+      }
+    }
+  }, [wildfires, mapInstance, handleWildfireSelect]);
 
   return (
     <div className="h-screen w-full relative overflow-hidden">
