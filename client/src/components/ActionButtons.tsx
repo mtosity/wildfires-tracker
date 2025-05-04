@@ -19,7 +19,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           variant="ghost"
           size="sm"
           className={`px-3 py-1.5 flex items-center text-sm font-medium rounded-md ${
-            activeView === 'map' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-red-50 hover:text-red-600'
+            activeView === 'map' ? 'bg-red-100 text-red-700 border border-red-300 font-bold hover:bg-red-200 hover:text-red-800' : 'hover:bg-red-50 hover:text-red-600'
           }`}
           onClick={() => onViewChange('map')}
         >
@@ -30,7 +30,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           variant="ghost"
           size="sm"
           className={`px-3 py-1.5 flex items-center text-sm font-medium rounded-md ${
-            activeView === 'fires' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-red-50 hover:text-red-600'
+            activeView === 'fires' ? 'bg-red-100 text-red-700 border border-red-300 font-bold hover:bg-red-200 hover:text-red-800' : 'hover:bg-red-50 hover:text-red-600'
           }`}
           onClick={() => onViewChange('fires')}
         >
@@ -41,7 +41,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           variant="ghost"
           size="sm"
           className={`px-3 py-1.5 flex items-center text-sm font-medium rounded-md ${
-            activeView === 'airQuality' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-red-50 hover:text-red-600'
+            activeView === 'airQuality' ? 'bg-red-100 text-red-700 border border-red-300 font-bold hover:bg-red-200 hover:text-red-800' : 'hover:bg-red-50 hover:text-red-600'
           }`}
           onClick={() => onViewChange('airQuality')}
         >
