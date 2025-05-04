@@ -194,25 +194,25 @@ const Home = () => {
         {/* Clear Selection Button - Only show when a wildfire is selected */}
         {selectedWildfire && (
           <Button 
-            className="map-overlay p-3 flex items-center justify-center hover:bg-gray-100 transition-colors rounded-full shadow-md"
+            className="map-overlay p-2 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors rounded-full shadow-md"
             onClick={() => setSelectedWildfire(null)}
-            size="icon"
+            size="sm"
             variant="ghost"
             title="Clear selection"
           >
-            <span className="material-icons">close</span>
+            <span className="material-icons text-sm">close</span>
           </Button>
         )}
         
         {/* Toggle Sidebar Button */}
         <Button 
-          className="map-overlay p-3 flex items-center justify-center hover:bg-gray-100 transition-colors rounded-full shadow-md"
+          className="map-overlay p-2 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors rounded-full shadow-md"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          size="icon"
+          size="sm"
           variant="ghost"
           title="Show wildfire list"
         >
-          <span className="material-icons">format_list_bulleted</span>
+          <span className="material-icons text-sm">format_list_bulleted</span>
         </Button>
       </div>
       
