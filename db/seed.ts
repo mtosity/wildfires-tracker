@@ -107,6 +107,7 @@ async function seed() {
         severity: "high",
         cause: "Lightning",
         perimeterCoordinates: JSON.stringify(generateCircleCoordinates(35.9728, -111.9876, acresAreaToRadius(3200))),
+        newsUrl: "https://www.fs.usda.gov/coconino/",
         updated: new Date()
       },
       {
@@ -186,13 +187,17 @@ async function seed() {
           severity: wildfire.severity,
           cause: wildfire.cause,
           perimeterCoordinates: wildfire.perimeterCoordinates,
+          newsUrl: (wildfire as any).newsUrl, // Type assertion for the optional property
           updated: wildfire.updated
         });
         console.log(`Inserted wildfire: ${wildfire.name}`);
       } else {
-        // Update the existing wildfire with perimeter coordinates
+        // Update the existing wildfire with perimeter coordinates and news URL
         await db.update(schema.wildfires)
-          .set({ perimeterCoordinates: wildfire.perimeterCoordinates })
+          .set({ 
+            perimeterCoordinates: wildfire.perimeterCoordinates,
+            newsUrl: (wildfire as any).newsUrl // Add news URL to existing records 
+          })
           .where(eq(schema.wildfires.id, wildfire.id));
         console.log(`Updated wildfire: ${wildfire.name} with perimeter coordinates`);
       }
