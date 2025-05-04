@@ -1,8 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <!-- Script to set theme class before page loads to prevent flash -->
+    <script>
+      (function() {
+        // Check localStorage for theme preference
+        const storedTheme = localStorage.getItem('ui-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        // If dark theme is stored or system prefers dark and no preference
+        if (storedTheme === 'dark' || (!storedTheme && prefersDark) || storedTheme === 'system' && prefersDark) {
+          document.documentElement.classList.add('dark');
+        } else if (storedTheme === 'light') {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
     
     <!-- Title -->
     <title>FireTracker - Real-time Wildfire Monitoring</title>

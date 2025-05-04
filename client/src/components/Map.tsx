@@ -116,9 +116,23 @@ const Map: React.FC<MapProps> = ({
     };
   }, []);
 
-  // Get the current theme from the document class
+  // Get the current theme from both document class and localStorage
   const getThemeMode = () => {
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    // Check the document class first
+    if (document.documentElement.classList.contains('dark')) {
+      return 'dark';
+    }
+    
+    // If not in class, check localStorage as a fallback
+    const storedTheme = localStorage.getItem('ui-theme');
+    if (storedTheme === 'dark') {
+      return 'dark';
+    } else if (storedTheme === 'system') {
+      // Check system preference
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    
+    return 'light';
   };
 
   useEffect(() => {

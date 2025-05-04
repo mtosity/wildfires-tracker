@@ -22,30 +22,54 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  defaultTheme = "dark",
   storageKey = "ui-theme",
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+    () => {
+      // Check for storage first
+      const storedTheme = localStorage.getItem(storageKey) as Theme;
+      if (storedTheme) {
+        return storedTheme;
+      }
+      
+      // Check if dark class already applied by initialization script
+      if (document.documentElement.classList.contains('dark')) {
+        return 'dark';
+      }
+      
+      return defaultTheme;
+    }
   );
 
   useEffect(() => {
     const root = window.document.documentElement;
     
-    root.classList.remove("light", "dark");
+    // Don't remove classes right away - might cause flicker
+    // Only update if needed
+    const hasDarkClass = root.classList.contains('dark');
+    const hasLightClass = root.classList.contains('light');
+    
+    // First determine what class should be applied
+    let classToAdd: 'dark' | 'light';
     
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
+      classToAdd = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
-      
-      root.classList.add(systemTheme);
-      return;
+    } else {
+      classToAdd = theme as 'dark' | 'light';
     }
     
-    root.classList.add(theme);
+    // Now update classes only if needed
+    if (classToAdd === 'dark' && !hasDarkClass) {
+      root.classList.remove('light');
+      root.classList.add('dark');
+    } else if (classToAdd === 'light' && !hasLightClass) {
+      root.classList.remove('dark');
+      root.classList.add('light');
+    }
   }, [theme]);
 
   const value = {
