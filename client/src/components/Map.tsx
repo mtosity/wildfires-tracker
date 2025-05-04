@@ -312,128 +312,135 @@ const Map: React.FC<MapProps> = ({
     });
   }, [clusters, selectedWildfire, mapLoaded, onWildfireSelect, viewportBounds, supercluster, clearAllMarkers]);
 
-  // Handle fire perimeter rendering based on zoom level
+  // Add perimeter for a specific wildfire
+  const addPerimeterForWildfire = useCallback((wildfire: Wildfire) => {
+    if (!map.current || !mapLoaded || !wildfire.perimeterCoordinates) return;
+    
+    const sourceId = `perimeter-source-${wildfire.id}`;
+    const layerId = `perimeter-layer-${wildfire.id}`;
+    const hasLayer = perimeterLayersRef.current[layerId];
+    
+    // If we already have this layer, just make sure it's visible
+    if (hasLayer) {
+      try {
+        map.current.setLayoutProperty(layerId, 'visibility', 'visible');
+        map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'visible');
+        return;
+      } catch (error) {
+        console.error("Error showing existing perimeter layer:", error);
+      }
+    }
+    
+    try {
+      // Parse perimeter coordinates
+      let perimeterCoords;
+      try {
+        perimeterCoords = JSON.parse(wildfire.perimeterCoordinates);
+        if (!Array.isArray(perimeterCoords) || perimeterCoords.length === 0) {
+          return; // Skip if perimeter data isn't valid
+        }
+      } catch (parseError) {
+        console.error("Error parsing perimeter coordinates:", parseError);
+        return;
+      }
+      
+      // Add source if it doesn't exist
+      if (!map.current.getSource(sourceId)) {
+        try {
+          map.current.addSource(sourceId, {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'Polygon',
+                coordinates: [perimeterCoords.map((coord: {lng: number, lat: number}) => [coord.lng, coord.lat])]
+              }
+            }
+          });
+        } catch (sourceError) {
+          console.error("Error adding source for wildfire:", wildfire.id, sourceError);
+          return;
+        }
+      }
+      
+      // Get color based on severity
+      const color = wildfire.severity === 'high' ? '#D32F2F' : 
+                    wildfire.severity === 'medium' ? '#FFA000' : 
+                    wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
+      
+      // Add the fill layer
+      try {
+        map.current.addLayer({
+          id: layerId,
+          source: sourceId,
+          type: 'fill',
+          paint: {
+            'fill-color': color,
+            'fill-opacity': 0.3,
+            'fill-outline-color': color
+          }
+        });
+        
+        // Add outline layer
+        map.current.addLayer({
+          id: `${layerId}-outline`,
+          source: sourceId,
+          type: 'line',
+          paint: {
+            'line-color': color,
+            'line-width': 2,
+            'line-opacity': 0.8
+          }
+        });
+        
+        // Track that we've added this layer
+        perimeterLayersRef.current[layerId] = true;
+      } catch (layerError) {
+        console.error("Error adding layer for wildfire:", wildfire.id, layerError);
+      }
+    } catch (error) {
+      console.error("Error rendering perimeter for wildfire:", wildfire.id, error);
+    }
+  }, [mapLoaded]);
+  
+  // Hide all perimeters
+  const hideAllPerimeters = useCallback(() => {
+    if (!map.current) return;
+    
+    Object.keys(perimeterLayersRef.current).forEach(layerId => {
+      try {
+        const outlineLayerId = layerId + '-outline';
+        map.current?.setLayoutProperty(layerId, 'visibility', 'none');
+        map.current?.setLayoutProperty(outlineLayerId, 'visibility', 'none');
+      } catch (error) {
+        console.error("Error hiding perimeter layer:", layerId, error);
+      }
+    });
+  }, []);
+  
+  // Show perimeter for selected wildfire
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
     
-    // Only show perimeters when zoomed in enough
-    const shouldShowPerimeters = currentZoom >= 9;
-    console.log("Current zoom:", currentZoom, "Show perimeters:", shouldShowPerimeters);
+    // First hide all perimeters
+    hideAllPerimeters();
     
-    // Skip perimeter rendering if we're at a low zoom level for better performance
-    if (!shouldShowPerimeters) return;
-    
-    // Only process wildfires with perimeter data and visible in the current viewport
-    wildfires.forEach(wildfire => {
-      if (!wildfire.perimeterCoordinates) return;
-      
-      const sourceId = `perimeter-source-${wildfire.id}`;
-      const layerId = `perimeter-layer-${wildfire.id}`;
-      const hasLayer = perimeterLayersRef.current[layerId];
-      
-      try {
-        // Try to parse perimeter coordinates
-        let perimeterCoords;
-        try {
-          perimeterCoords = JSON.parse(wildfire.perimeterCoordinates);
-          if (!Array.isArray(perimeterCoords) || perimeterCoords.length === 0) {
-            return; // Skip this wildfire if perimeter data isn't valid
-          }
-        } catch (parseError) {
-          // Skip this wildfire if we can't parse its perimeter data
-          return;
-        }
-        
-        // Check if we need to add the source
-        if (map.current && !map.current.getSource(sourceId)) {
-          try {
-            map.current.addSource(sourceId, {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'Polygon',
-                  coordinates: [perimeterCoords.map((coord: {lng: number, lat: number}) => [coord.lng, coord.lat])]
-                }
-              }
-            });
-          } catch (sourceError) {
-            console.error("Error adding source for wildfire:", wildfire.id, sourceError);
-            return;
-          }
-        }
-        
-        if (shouldShowPerimeters) {
-          // If the layer doesn't exist but we should show it
-          if (map.current && !hasLayer) {
-            // Get color based on severity
-            const color = wildfire.severity === 'high' ? '#D32F2F' : 
-                          wildfire.severity === 'medium' ? '#FFA000' : 
-                          wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
-                          
-            try {
-              // Add layer if it doesn't exist
-              map.current.addLayer({
-                id: layerId,
-                source: sourceId,
-                type: 'fill',
-                paint: {
-                  'fill-color': color,
-                  'fill-opacity': 0.3,
-                  'fill-outline-color': color
-                }
-              });
-              
-              // Add outline layer
-              map.current.addLayer({
-                id: `${layerId}-outline`,
-                source: sourceId,
-                type: 'line',
-                paint: {
-                  'line-color': color,
-                  'line-width': 2,
-                  'line-opacity': 0.8
-                }
-              });
-              
-              // Track that we've added this layer
-              perimeterLayersRef.current[layerId] = true;
-            } catch (layerError) {
-              console.error("Error adding layer for wildfire:", wildfire.id, layerError);
-              return;
-            }
-          }
-          // If the layer exists, make sure it's visible
-          else if (map.current && hasLayer) {
-            try {
-              map.current.setLayoutProperty(layerId, 'visibility', 'visible');
-              map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'visible');
-            } catch (visibilityError) {
-              console.error("Error showing layer for wildfire:", wildfire.id, visibilityError);
-            }
-          }
-        } else if (map.current && hasLayer) {
-          // If we shouldn't show perimeters but the layer exists
-          try {
-            map.current.setLayoutProperty(layerId, 'visibility', 'none');
-            map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'none');
-          } catch (hideError) {
-            console.error("Error hiding layer for wildfire:", wildfire.id, hideError);
-          }
-        }
-      } catch (error) {
-        console.error("Error rendering perimeter for wildfire:", wildfire.id, error);
-      }
-    });
-  }, [wildfires, mapLoaded, currentZoom]);
+    // If we have a selected wildfire with perimeter data, show it
+    if (selectedWildfire?.perimeterCoordinates) {
+      addPerimeterForWildfire(selectedWildfire);
+    }
+  }, [selectedWildfire, mapLoaded, addPerimeterForWildfire, hideAllPerimeters]);
 
   // Fly to the selected wildfire
   useEffect(() => {
     if (map.current && selectedWildfire && mapLoaded) {
+      // Use a higher zoom level if the wildfire has perimeter data
+      const zoomLevel = selectedWildfire.perimeterCoordinates ? 12 : 10;
+      
       map.current.flyTo({
         center: [selectedWildfire.longitude, selectedWildfire.latitude],
-        zoom: 10,
+        zoom: zoomLevel,
         essential: true
       });
     }
