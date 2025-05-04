@@ -1,0 +1,16 @@
+{
+  "name": "FireTracker - Real-time Wildfire Monitoring",
+  "short_name": "FireTracker",
+  "description": "Monitor active wildfires across the USA with real-time data, emergency alerts, and critical fire information to stay informed and safe.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#e53e3e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
