@@ -57,33 +57,17 @@ const FirePopup: React.FC<FirePopupProps> = ({
     }
   };
 
-  // Determine if wildfire is active
-  const isActive = wildfire.containment < 100 && wildfire.severity !== 'contained';
-
   return (
-    <div className={`map-overlay p-4 w-72 pointer-events-auto ${isActive ? 'border-l-4 border-red-500' : ''}`}>
+    <div className="map-overlay p-4 w-72 pointer-events-auto">
       <div className="flex justify-between items-start mb-2">
-        <div>
-          <h3 className="font-semibold text-gray-900 pr-2">{wildfire.name}</h3>
-          {isActive && (
-            <div className="mt-1 flex items-center">
-              <span className={`w-2 h-2 ${getSeverityColor(wildfire.severity)} rounded-full animate-pulse mr-2`}></span>
-              <span className="text-xs font-semibold text-red-700">ACTIVE FIRE</span>
-            </div>
-          )}
-        </div>
+        <h3 className="font-semibold text-gray-900 pr-2">{wildfire.name}</h3>
         <button onClick={onClose} className="text-gray-500">
           <span className="material-icons text-lg">close</span>
         </button>
       </div>
       <div className="flex items-center mb-2">
         <span className={`inline-block w-3 h-3 ${getSeverityColor(wildfire.severity)} rounded-full mr-2`}></span>
-        <span className={`text-xs font-medium px-2 py-0.5 ${
-          wildfire.severity === 'high' ? 'bg-red-100 text-red-800' :
-          wildfire.severity === 'medium' ? 'bg-amber-100 text-amber-800' :
-          wildfire.severity === 'low' ? 'bg-green-100 text-green-800' :
-          'bg-gray-100 text-gray-800'
-        } rounded`}>
+        <span className="text-xs font-medium px-2 py-0.5 bg-red-100 text-red-800 rounded">
           {getSeverityLabel(wildfire.severity)}
         </span>
         <span className="ml-auto text-xs text-gray-500">
@@ -104,12 +88,8 @@ const FirePopup: React.FC<FirePopupProps> = ({
           <p>Started: {wildfire.startDate}</p>
         </div>
         <div className="flex items-start">
-          <span className={`material-icons text-sm mr-1 ${isActive ? 'text-orange-500' : 'text-gray-500'}`}>
-            {isActive ? 'local_fire_department' : 'public'}
-          </span>
-          <p className={isActive ? 'font-medium text-orange-600' : ''}>
-            Containment: {wildfire.containment}%
-          </p>
+          <span className="material-icons text-gray-500 text-sm mr-1">public</span>
+          <p>Containment: {wildfire.containment}%</p>
         </div>
       </div>
       <div className="mt-3 flex justify-between">
