@@ -14,6 +14,41 @@ async function seed() {
       return !!existing;
     };
 
+    // Helper function to generate circle coordinates around a point
+    const generateCircleCoordinates = (centerLat: number, centerLng: number, radiusInKm: number, points: number = 30) => {
+      const coordinates = [];
+      const angularDistance = 2 * Math.PI / points;
+      
+      for (let i = 0; i < points; i++) {
+        const angle = i * angularDistance;
+        
+        // Calculate coordinates
+        const latOffset = (radiusInKm / 111.32) * Math.cos(angle); // 1 degree of latitude is approximately 111.32 km
+        const lngFactor = Math.cos(centerLat * Math.PI / 180);
+        const lngOffset = (radiusInKm / (111.32 * lngFactor)) * Math.sin(angle);
+        
+        const lat = centerLat + latOffset;
+        const lng = centerLng + lngOffset;
+        
+        coordinates.push({ lng, lat });
+      }
+      
+      // Close the loop
+      coordinates.push(coordinates[0]);
+      
+      return coordinates;
+    };
+    
+    // Calculate radius (in km) from acres
+    const acresAreaToRadius = (acres: number) => {
+      // 1 acre is approximately 0.00404686 km²
+      const areaInKm2 = acres * 0.00404686;
+      
+      // Area of a circle is πr²
+      // r = sqrt(area / π)
+      return Math.sqrt(areaInKm2 / Math.PI);
+    };
+
     // Sample wildfire data
     const wildfires = [
       {
@@ -27,6 +62,7 @@ async function seed() {
         startDate: "Sep 12, 2023",
         severity: "high",
         cause: "Lightning",
+        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(37.8651, -119.5383, acresAreaToRadius(1243))),
         updated: new Date()
       },
       {
@@ -40,6 +76,7 @@ async function seed() {
         startDate: "Sep 14, 2023",
         severity: "medium",
         cause: "Human",
+        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(39.6553, -106.8287, acresAreaToRadius(487))),
         updated: new Date()
       },
       {
@@ -53,6 +90,7 @@ async function seed() {
         startDate: "Sep 10, 2023",
         severity: "low",
         cause: "Unknown",
+        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(37.2046, -119.2539, acresAreaToRadius(150))),
         updated: new Date()
       },
       {
@@ -66,6 +104,7 @@ async function seed() {
         startDate: "Sep 8, 2023",
         severity: "high",
         cause: "Lightning",
+        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(35.9728, -111.9876, acresAreaToRadius(3200))),
         updated: new Date()
       },
       {
@@ -79,6 +118,7 @@ async function seed() {
         startDate: "Sep 13, 2023",
         severity: "medium",
         cause: "Campfire",
+        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(40.6461, -111.4980, acresAreaToRadius(890))),
         updated: new Date()
       }
     ];
@@ -128,7 +168,7 @@ async function seed() {
       }
     ];
 
-    // Insert wildfires if they don't already exist
+    // Insert wildfires if they don't already exist, otherwise update with perimeter data
     for (const wildfire of wildfires) {
       const exists = await wildfireExists(wildfire.id);
       if (!exists) {
@@ -143,11 +183,16 @@ async function seed() {
           startDate: wildfire.startDate,
           severity: wildfire.severity,
           cause: wildfire.cause,
+          perimeterCoordinates: wildfire.perimeterCoordinates,
           updated: wildfire.updated
         });
         console.log(`Inserted wildfire: ${wildfire.name}`);
       } else {
-        console.log(`Wildfire already exists: ${wildfire.name}`);
+        // Update the existing wildfire with perimeter coordinates
+        await db.update(schema.wildfires)
+          .set({ perimeterCoordinates: wildfire.perimeterCoordinates })
+          .where(wildfire => wildfire.id.equals(wildfire.id));
+        console.log(`Updated wildfire: ${wildfire.name} with perimeter coordinates`);
       }
     }
 

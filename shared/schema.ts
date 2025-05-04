@@ -22,6 +22,7 @@ export const wildfires = pgTable("wildfires", {
   startDate: text("start_date").notNull(),
   severity: text("severity").notNull(),
   cause: text("cause"),
+  perimeterCoordinates: text("perimeter_coordinates"),  // JSON string of coordinates defining fire perimeter
   updated: timestamp("updated").notNull().defaultNow(),
 });
 

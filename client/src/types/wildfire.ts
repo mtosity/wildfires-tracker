@@ -9,7 +9,13 @@ export interface Wildfire {
   startDate: string;
   severity: 'high' | 'medium' | 'low' | 'contained';
   cause?: string;
+  perimeterCoordinates?: string; // JSON string of coordinates defining fire perimeter
   updated: string;
+}
+
+export interface PerimeterCoordinate {
+  lng: number;
+  lat: number;
 }
 
 export interface Alert {
