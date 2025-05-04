@@ -126,9 +126,13 @@ const Map: React.FC<MapProps> = ({
     mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA';
 
     if (mapContainer.current && !map.current) {
+      // Determine if dark mode is active
+      const isDarkMode = document.documentElement.classList.contains('dark');
+      
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11', // Lighter map style that's easier on the eyes
+        // Use dark style for dark mode, light style for light mode
+        style: isDarkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
         center: [initialPosition?.longitude || defaultPosition.longitude, initialPosition?.latitude || defaultPosition.latitude],
         zoom: initialPosition?.zoom || defaultPosition.zoom,
         bounds: [usaBounds.west, usaBounds.south, usaBounds.east, usaBounds.north],

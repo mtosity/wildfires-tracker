@@ -115,11 +115,28 @@
   background: #a0a0a0;
 }
 
+/* Dark mode scrollbar */
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #555555;
+  border-radius: 6px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #777777;
+}
+
 .map-overlay {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(8px);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark .map-overlay {
+  background: rgba(30, 30, 30, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* Marker Styles */
