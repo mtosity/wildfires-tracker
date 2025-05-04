@@ -514,6 +514,35 @@ const Map: React.FC<MapProps> = ({
   }, []);
   
   // Show perimeter for selected wildfire and hide markers
+  // Monitor theme changes and update map style
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === 'attributes' &&
+          mutation.attributeName === 'class' &&
+          map.current
+        ) {
+          const isDarkMode = document.documentElement.classList.contains('dark');
+          map.current.setStyle(
+            isDarkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11'
+          );
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [mapLoaded]);
+
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
     

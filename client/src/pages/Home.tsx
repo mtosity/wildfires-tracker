@@ -8,6 +8,7 @@ import ActionButtons from "@/components/ActionButtons";
 import AlertBanner from "@/components/AlertBanner";
 import FirePopup from "@/components/FirePopup";
 import MobileBottomSheet from "@/components/MobileBottomSheet";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import {
@@ -219,6 +220,11 @@ const Home = () => {
             <span className="material-icons text-sm">close</span>
           </Button>
         )}
+
+        {/* Theme Toggle Button */}
+        <div className="map-overlay rounded-full shadow-md">
+          <ThemeToggle />
+        </div>
 
         {/* Toggle Sidebar Button */}
         <Button
