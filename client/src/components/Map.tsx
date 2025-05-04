@@ -32,6 +32,7 @@ const Map: React.FC<MapProps> = ({
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const clusterMarkersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const perimeterLayersRef = useRef<{ [key: string]: boolean }>({});
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState<number>(4);
   const [viewportBounds, setViewportBounds] = useState<mapboxgl.LngLatBounds | null>(null);
@@ -176,24 +177,11 @@ const Map: React.FC<MapProps> = ({
               }
             }, 'non-usa-dim');
             
-            // If user location is available, adjust view to show user location and part of USA
-            if (userLocation) {
-              // Calculate center point between user location and middle of USA
-              const usaCenter = [(usaBounds.west + usaBounds.east) / 2, (usaBounds.south + usaBounds.north) / 2];
-              const centerLng = (userLocation.longitude + usaCenter[0]) / 2;
-              const centerLat = (userLocation.latitude + usaCenter[1]) / 2;
-              
-              map.current.jumpTo({
-                center: [centerLng, centerLat],
-                zoom: 4  // Zoom level to show region
-              });
-            } else {
-              // Default to USA view if no user location
-              map.current.fitBounds([
-                [usaBounds.west, usaBounds.south],
-                [usaBounds.east, usaBounds.north]
-              ], { padding: 20 });
-            }
+                  // Default to USA view initially - we'll adjust to user location later if available
+            map.current.fitBounds([
+              [usaBounds.west, usaBounds.south],
+              [usaBounds.east, usaBounds.north]
+            ], { padding: 20 });
           } catch (error) {
             console.error("Error adding USA highlight:", error);
           }
@@ -234,9 +222,14 @@ const Map: React.FC<MapProps> = ({
     };
   }, [initialPosition, throttle, userLocation]);
 
-  // Handle user location updates - just add marker, no zooming
+  // Handle user location updates with controlled zooming
   useEffect(() => {
     if (map.current && userLocation && mapLoaded) {
+      // Clear any existing user location markers
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+      }
+      
       // Create user marker container
       const el = document.createElement('div');
       el.className = 'w-8 h-8 relative flex items-center justify-center';
@@ -252,13 +245,30 @@ const Map: React.FC<MapProps> = ({
       el.appendChild(centerDot);
       
       // Create and add the user location marker
-      new mapboxgl.Marker(el)
+      const marker = new mapboxgl.Marker(el)
         .setLngLat([userLocation.longitude, userLocation.latitude])
         .addTo(map.current);
       
-      // We don't zoom here - the initial map setup now handles this
+      // Store the marker reference
+      userMarkerRef.current = marker;
+      
+      // Fly to a position that shows both the user location and part of the USA
+      try {
+        // Use a custom fitBounds to ensure we show both the user and a portion of the USA
+        const usaCenter = [(usaBounds.west + usaBounds.east) / 2, (usaBounds.south + usaBounds.north) / 2];
+        
+        // Create a zoom level that shows both the user location and part of the USA
+        map.current.flyTo({
+          center: [userLocation.longitude, userLocation.latitude],
+          zoom: 5, // Mid-level zoom that shows regional context
+          duration: 2000,
+          essential: true
+        });
+      } catch (error) {
+        console.error("Error adjusting map to user location:", error);
+      }
     }
-  }, [userLocation, mapLoaded]);
+  }, [userLocation, mapLoaded, usaBounds]);
 
   // Clear all markers
   const clearAllMarkers = useCallback(() => {
