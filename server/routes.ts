@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import axios from "axios";
 import NodeCache from "node-cache";
+import { fetchAndUpdateWildfires } from "./services/wildfireService";
 
 // Cache to prevent too many API calls
 const apiCache = new NodeCache({ stdTTL: 300 }); // 5 minute cache
@@ -156,6 +157,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching wildfire updates:", error);
       res.status(500).json({ message: "Failed to fetch wildfire updates" });
+    }
+  });
+  
+  // Fetch and update wildfires from NASA FIRMS API
+  app.get(`${apiPrefix}/wildfires/refresh`, async (req, res) => {
+    try {
+      // Check if we have recently fetched data to avoid API abuse
+      const cacheKey = 'firms-api-refresh';
+      if (apiCache.has(cacheKey)) {
+        return res.json({ 
+          message: "Using cached data. Try again later for fresh data.",
+          lastUpdated: apiCache.get(cacheKey)
+        });
+      }
+      
+      const result = await fetchAndUpdateWildfires();
+      
+      if (result.success) {
+        // Store timestamp in cache
+        apiCache.set(cacheKey, new Date());
+        
+        res.json({ 
+          message: `Successfully refreshed wildfire data from NASA FIRMS API. ${result.count} wildfires processed.`,
+          timestamp: new Date()
+        });
+      } else {
+        res.status(500).json({ 
+          message: "Failed to refresh wildfire data",
+          error: result.error
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing wildfire data:", error);
+      res.status(500).json({ 
+        message: "Failed to refresh wildfire data",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
