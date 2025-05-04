@@ -211,6 +211,7 @@ const Home = () => {
         onWildfireSelect={handleWildfireSelect}
         selectedWildfire={selectedWildfire}
         userLocation={position}
+        onMapInit={setMapInstance}
       />
 
       {/* Header */}
@@ -302,6 +303,7 @@ const Home = () => {
         <AlertBanner
           alert={activeAlerts[0]}
           onClose={() => handleDismissAlert(activeAlerts[0].id)}
+          onAlertClick={() => handleAlertClick(activeAlerts[0])}
         />
       )}
     </div>

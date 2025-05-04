@@ -12,6 +12,7 @@ interface MapProps {
   selectedWildfire?: Wildfire | null;
   initialPosition?: MapPosition;
   userLocation?: { latitude: number; longitude: number } | null;
+  onMapInit?: (mapInstance: mapboxgl.Map) => void;
 }
 
 type PointFeature = GeoJSON.Feature<GeoJSON.Point, { 
@@ -25,7 +26,8 @@ const Map: React.FC<MapProps> = ({
   onWildfireSelect,
   selectedWildfire,
   initialPosition,
-  userLocation
+  userLocation,
+  onMapInit
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -161,6 +163,11 @@ const Map: React.FC<MapProps> = ({
       map.current.on('load', () => {
         setMapLoaded(true);
         if (map.current) {
+          // Notify parent component about map initialization
+          if (onMapInit) {
+            onMapInit(map.current);
+          }
+          
           // Add USA boundary highlight
           try {
             // Add a semi-transparent layer to dim non-USA areas
