@@ -40,10 +40,19 @@ const Map: React.FC<MapProps> = ({
     initialPosition?.latitude || 39.8283
   ]);
   
+  // USA-focused position and bounds
   const defaultPosition = {
     latitude: 39.8283,
     longitude: -98.5795,
-    zoom: 4
+    zoom: 3.5
+  };
+  
+  // USA Bounding Box
+  const usaBounds = {
+    north: 49.5,  // Northern border with Canada
+    south: 24.5,  // Southern border with Mexico
+    west: -125.0, // Western coast
+    east: -66.0   // Eastern coast
   };
   
   // Convert wildfires to GeoJSON features for clustering
@@ -121,12 +130,61 @@ const Map: React.FC<MapProps> = ({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/outdoors-v12',
         center: [initialPosition?.longitude || defaultPosition.longitude, initialPosition?.latitude || defaultPosition.latitude],
-        zoom: initialPosition?.zoom || defaultPosition.zoom
+        zoom: initialPosition?.zoom || defaultPosition.zoom,
+        bounds: [usaBounds.west, usaBounds.south, usaBounds.east, usaBounds.north],
+        fitBoundsOptions: { padding: 20 }
       });
 
       map.current.on('load', () => {
         setMapLoaded(true);
         if (map.current) {
+          // Add USA boundary highlight
+          try {
+            // Add a semi-transparent layer to dim non-USA areas
+            map.current.addLayer({
+              id: 'non-usa-dim',
+              type: 'background',
+              paint: {
+                'background-color': 'rgba(0, 0, 0, 0.3)'
+              }
+            });
+            
+            // Add USA shape to create a "hole" in the dim layer
+            map.current.addLayer({
+              id: 'usa-highlight',
+              type: 'fill',
+              source: {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  properties: {},
+                  geometry: {
+                    type: 'Polygon',
+                    coordinates: [[
+                      [usaBounds.west, usaBounds.south],
+                      [usaBounds.west, usaBounds.north],
+                      [usaBounds.east, usaBounds.north],
+                      [usaBounds.east, usaBounds.south],
+                      [usaBounds.west, usaBounds.south]
+                    ]]
+                  }
+                }
+              },
+              paint: {
+                'fill-color': 'transparent',
+                'fill-opacity': 0
+              }
+            }, 'non-usa-dim');
+            
+            // Set initial bounding box to USA
+            map.current.fitBounds([
+              [usaBounds.west, usaBounds.south],
+              [usaBounds.east, usaBounds.north]
+            ], { padding: 20 });
+          } catch (error) {
+            console.error("Error adding USA highlight:", error);
+          }
+          
           setViewportBounds(map.current.getBounds());
         }
       });
