@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Map from "@/components/Map";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
@@ -18,21 +18,9 @@ import {
   useNearbyWildfires,
 } from "@/hooks/useWildfireData";
 import { useMobile } from "@/hooks/use-mobile";
-import { Wildfire, Alert, MapBounds, WildfireStats, MapPosition } from "@/types/wildfire";
+import { Wildfire, Alert, MapBounds, WildfireStats } from "@/types/wildfire";
 import mapboxgl from "mapbox-gl";
 import { useToast } from "@/hooks/use-toast";
-
-// Extend Window interface to include mapInstance
-declare global {
-  interface Window {
-    mapInstance?: {
-      flyTo: (options: { center: [number, number]; zoom: number; essential?: boolean; duration?: number }) => void;
-      zoomIn: () => void;
-      zoomOut: () => void;
-      getBounds: () => mapboxgl.LngLatBounds | undefined;
-    };
-  }
-}
 
 const Home = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -117,20 +105,27 @@ const Home = () => {
   }, []);
 
   const handleZoomIn = useCallback(() => {
-    if (window.mapInstance) {
-      window.mapInstance.zoomIn();
+    if (mapInstance) {
+      mapInstance.zoomIn();
     }
-  }, []);
+  }, [mapInstance]);
 
   const handleZoomOut = useCallback(() => {
-    if (window.mapInstance) {
-      window.mapInstance.zoomOut();
+    if (mapInstance) {
+      mapInstance.zoomOut();
     }
-  }, []);
+  }, [mapInstance]);
 
   const handleLocateMe = useCallback(() => {
     getPosition();
-  }, [getPosition]);
+
+    if (position && mapInstance) {
+      mapInstance.flyTo({
+        center: [position.longitude, position.latitude],
+        zoom: 10,
+      });
+    }
+  }, [getPosition, position, mapInstance]);
 
   const handleGetDirections = useCallback(() => {
     if (selectedWildfire) {
@@ -176,50 +171,6 @@ const Home = () => {
   const handleDismissAlert = useCallback((alertId: string) => {
     setDismissedAlerts((prev) => [...prev, alertId]);
   }, []);
-  
-  // Create a timeout ref to handle navigation timing
-  const alertTimeoutRef = useRef<number | null>(null);
-  
-  // Update useEffect cleanup for the timeout
-  useEffect(() => {
-    return () => {
-      if (alertTimeoutRef.current) {
-        window.clearTimeout(alertTimeoutRef.current);
-      }
-    };
-  }, []);
-  
-  const handleAlertClick = useCallback((alert: Alert) => {
-    // Check if the alert is associated with a wildfire
-    if (alert.wildfireId) {
-      // Find the wildfire from the current wildfires array
-      const relatedWildfire = wildfires.find(fire => fire.id === alert.wildfireId);
-      
-      if (relatedWildfire) {
-        // First, select the wildfire to show its details
-        handleWildfireSelect(relatedWildfire);
-        
-        // Clear any existing timeouts
-        if (alertTimeoutRef.current) {
-          window.clearTimeout(alertTimeoutRef.current);
-        }
-        
-        // Use the direct window.mapInstance method to navigate
-        // We don't need to update the initialPosition state since that causes
-        // continual re-rendering
-        alertTimeoutRef.current = window.setTimeout(() => {
-          if (window.mapInstance) {
-            window.mapInstance.flyTo({
-              center: [relatedWildfire.longitude, relatedWildfire.latitude],
-              zoom: 12,
-              essential: true,
-              duration: 1500
-            });
-          }
-        }, 100);
-      }
-    }
-  }, [wildfires, handleWildfireSelect]);
 
   const handleSubscribeToAlerts = useCallback(() => {
     if (selectedWildfire) {
@@ -330,7 +281,6 @@ const Home = () => {
         <AlertBanner
           alert={activeAlerts[0]}
           onClose={() => handleDismissAlert(activeAlerts[0].id)}
-          onAlertClick={() => handleAlertClick(activeAlerts[0])}
         />
       )}
     </div>
