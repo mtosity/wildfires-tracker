@@ -78,7 +78,7 @@ const Map: React.FC<MapProps> = ({
   
   // Get clusters based on current map view
   const clusters = useMemo(() => {
-    if (!viewportBounds || !mapLoaded) return [];
+    if (!viewportBounds || !mapLoaded || !supercluster || points.length === 0) return [];
     
     const bbox: [number, number, number, number] = [
       viewportBounds.getWest(),
@@ -87,8 +87,13 @@ const Map: React.FC<MapProps> = ({
       viewportBounds.getNorth()
     ];
     
-    return supercluster.getClusters(bbox, Math.floor(currentZoom));
-  }, [supercluster, viewportBounds, currentZoom, mapLoaded]);
+    try {
+      return supercluster.getClusters(bbox, Math.floor(currentZoom));
+    } catch (error) {
+      console.error("Error getting clusters:", error);
+      return [];
+    }
+  }, [supercluster, viewportBounds, currentZoom, mapLoaded, points.length]);
   
   // Throttle function for performance
   const throttle = useCallback((func: Function, limit: number) => {
@@ -131,10 +136,12 @@ const Map: React.FC<MapProps> = ({
         if (map.current) {
           setCurrentZoom(map.current.getZoom());
           setMapCenter([map.current.getCenter().lng, map.current.getCenter().lat]);
-          setViewportBounds(map.current.getBounds());
           
-          if (onMapMove) {
-            onMapMove(map.current.getBounds());
+          const bounds = map.current.getBounds();
+          setViewportBounds(bounds);
+          
+          if (onMapMove && bounds) {
+            onMapMove(bounds);
           }
         }
       }, 100);
@@ -193,6 +200,8 @@ const Map: React.FC<MapProps> = ({
     
     // Add new clusters and markers
     clusters.forEach(cluster => {
+      if (!cluster || !cluster.geometry || !cluster.properties) return;
+      
       // Get cluster coordinates
       const [longitude, latitude] = cluster.geometry.coordinates;
       
@@ -220,15 +229,20 @@ const Map: React.FC<MapProps> = ({
         
         // Add click handler to expand cluster
         el.addEventListener('click', () => {
-          const expansionZoom = Math.min(
-            supercluster.getClusterExpansionZoom(cluster.properties.cluster_id),
-            16
-          );
-          map.current?.flyTo({
-            center: [longitude, latitude],
-            zoom: expansionZoom,
-            essential: true
-          });
+          if (!supercluster) return;
+          try {
+            const expansionZoom = Math.min(
+              supercluster.getClusterExpansionZoom(cluster.properties.cluster_id),
+              16
+            );
+            map.current?.flyTo({
+              center: [longitude, latitude],
+              zoom: expansionZoom,
+              essential: true
+            });
+          } catch (error) {
+            console.error("Error expanding cluster:", error);
+          }
         });
         
         // Create and store marker
@@ -240,13 +254,14 @@ const Map: React.FC<MapProps> = ({
       } else {
         // It's a single point
         const wildfire = cluster.properties.wildfire;
+        if (!wildfire) return;
         
         // Only render if wildfire is in current viewport (virtualization)
-        if (
-          wildfire.longitude >= viewportBounds.getWest() &&
-          wildfire.longitude <= viewportBounds.getEast() &&
-          wildfire.latitude >= viewportBounds.getSouth() &&
-          wildfire.latitude <= viewportBounds.getNorth()
+        if (viewportBounds && 
+            wildfire.longitude >= viewportBounds.getWest() &&
+            wildfire.longitude <= viewportBounds.getEast() &&
+            wildfire.latitude >= viewportBounds.getSouth() &&
+            wildfire.latitude <= viewportBounds.getNorth()
         ) {
           // Create marker element
           const markerEl = document.createElement('div');
@@ -305,19 +320,33 @@ const Map: React.FC<MapProps> = ({
     const shouldShowPerimeters = currentZoom >= 9;
     console.log("Current zoom:", currentZoom, "Show perimeters:", shouldShowPerimeters);
     
+    // Skip perimeter rendering if we're at a low zoom level for better performance
+    if (!shouldShowPerimeters) return;
+    
+    // Only process wildfires with perimeter data and visible in the current viewport
     wildfires.forEach(wildfire => {
+      if (!wildfire.perimeterCoordinates) return;
+      
       const sourceId = `perimeter-source-${wildfire.id}`;
       const layerId = `perimeter-layer-${wildfire.id}`;
       const hasLayer = perimeterLayersRef.current[layerId];
       
-      // If we have perimeter data for this wildfire
-      if (wildfire.perimeterCoordinates) {
+      try {
+        // Try to parse perimeter coordinates
+        let perimeterCoords;
         try {
-          // Parse perimeter coordinates
-          const perimeterCoords = JSON.parse(wildfire.perimeterCoordinates);
-          
-          // Check if we need to add the source
-          if (map.current && !map.current.getSource(sourceId)) {
+          perimeterCoords = JSON.parse(wildfire.perimeterCoordinates);
+          if (!Array.isArray(perimeterCoords) || perimeterCoords.length === 0) {
+            return; // Skip this wildfire if perimeter data isn't valid
+          }
+        } catch (parseError) {
+          // Skip this wildfire if we can't parse its perimeter data
+          return;
+        }
+        
+        // Check if we need to add the source
+        if (map.current && !map.current.getSource(sourceId)) {
+          try {
             map.current.addSource(sourceId, {
               type: 'geojson',
               data: {
@@ -329,54 +358,72 @@ const Map: React.FC<MapProps> = ({
                 }
               }
             });
+          } catch (sourceError) {
+            console.error("Error adding source for wildfire:", wildfire.id, sourceError);
+            return;
           }
-          
-          // If the layer exists but we shouldn't show it
-          if (map.current && hasLayer && !shouldShowPerimeters) {
-            map.current.setLayoutProperty(layerId, 'visibility', 'none');
-          } 
+        }
+        
+        if (shouldShowPerimeters) {
           // If the layer doesn't exist but we should show it
-          else if (map.current && !hasLayer && shouldShowPerimeters) {
+          if (map.current && !hasLayer) {
             // Get color based on severity
             const color = wildfire.severity === 'high' ? '#D32F2F' : 
                           wildfire.severity === 'medium' ? '#FFA000' : 
                           wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
                           
-            // Add layer if it doesn't exist
-            map.current.addLayer({
-              id: layerId,
-              source: sourceId,
-              type: 'fill',
-              paint: {
-                'fill-color': color,
-                'fill-opacity': 0.3,
-                'fill-outline-color': color
-              }
-            });
-            
-            // Add outline layer
-            map.current.addLayer({
-              id: `${layerId}-outline`,
-              source: sourceId,
-              type: 'line',
-              paint: {
-                'line-color': color,
-                'line-width': 2,
-                'line-opacity': 0.8
-              }
-            });
-            
-            // Track that we've added this layer
-            perimeterLayersRef.current[layerId] = true;
-          } 
-          // If the layer exists and we should show it
-          else if (map.current && hasLayer && shouldShowPerimeters) {
-            map.current.setLayoutProperty(layerId, 'visibility', 'visible');
-            map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'visible');
+            try {
+              // Add layer if it doesn't exist
+              map.current.addLayer({
+                id: layerId,
+                source: sourceId,
+                type: 'fill',
+                paint: {
+                  'fill-color': color,
+                  'fill-opacity': 0.3,
+                  'fill-outline-color': color
+                }
+              });
+              
+              // Add outline layer
+              map.current.addLayer({
+                id: `${layerId}-outline`,
+                source: sourceId,
+                type: 'line',
+                paint: {
+                  'line-color': color,
+                  'line-width': 2,
+                  'line-opacity': 0.8
+                }
+              });
+              
+              // Track that we've added this layer
+              perimeterLayersRef.current[layerId] = true;
+            } catch (layerError) {
+              console.error("Error adding layer for wildfire:", wildfire.id, layerError);
+              return;
+            }
           }
-        } catch (error) {
-          console.error("Error rendering perimeter for wildfire:", wildfire.id, error);
+          // If the layer exists, make sure it's visible
+          else if (map.current && hasLayer) {
+            try {
+              map.current.setLayoutProperty(layerId, 'visibility', 'visible');
+              map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'visible');
+            } catch (visibilityError) {
+              console.error("Error showing layer for wildfire:", wildfire.id, visibilityError);
+            }
+          }
+        } else if (map.current && hasLayer) {
+          // If we shouldn't show perimeters but the layer exists
+          try {
+            map.current.setLayoutProperty(layerId, 'visibility', 'none');
+            map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'none');
+          } catch (hideError) {
+            console.error("Error hiding layer for wildfire:", wildfire.id, hideError);
+          }
         }
+      } catch (error) {
+        console.error("Error rendering perimeter for wildfire:", wildfire.id, error);
       }
     });
   }, [wildfires, mapLoaded, currentZoom]);
