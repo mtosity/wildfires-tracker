@@ -18,6 +18,8 @@ const FirePopup: React.FC<FirePopupProps> = ({
   onGetDirections,
   onSubscribeToAlerts
 }) => {
+  // Debug log to check wildfire data
+  console.log("FirePopup wildfire data:", wildfire);
   const getSeverityLabel = (severity: string) => {
     switch (severity) {
       case 'high':
