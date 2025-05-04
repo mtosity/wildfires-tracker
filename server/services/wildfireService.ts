@@ -150,24 +150,37 @@ export async function fetchAndUpdateWildfires() {
     console.log('Fetching wildfire data from NASA FIRMS API...');
     
     // Use the NASA FIRMS API to get active fire data
-    // This would typically require an API key, but we can use the demo API for testing
-    // For a production app, you'd need to register for an API key
-    
     // North America region for demo (modify as needed)
     const northBound = 50;
     const southBound = 25;
     const eastBound = -60;
     const westBound = -130;
     
-    // DEMO URL - In production, use the proper API endpoint with your API key
-    const response = await axios.get('https://firms.modaps.eosdis.nasa.gov/api/area/csv/0d0bc989e5733952a2ef0e1741a0c00e/MODIS_NRT/world/1');
+    // Set up the API key and endpoint
+    // In a production environment, you would use a proper API key from NASA FIRMS
+    const apiKey = '0d0bc989e5733952a2ef0e1741a0c00e'; // Demo key
+    const apiUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${apiKey}/MODIS_NRT/world/1`;
+    
+    // Fetch the data from NASA FIRMS API
+    const response = await axios.get(apiUrl);
+    
+    console.log("NASA FIRMS API response status:", response.status);
+    
+    // Get a small sample of the response for debugging
+    if (response.data && typeof response.data === 'string') {
+      console.log("NASA FIRMS API response data preview:", 
+                 response.data.substring(0, 200) + "...");
+    }
     
     // Parse CSV response (simplified handling for demo)
     const lines = response.data.split('\n');
     const headers = lines[0].split(',');
     
+    console.log("Found headers:", headers);
+    
     const firmsData: FirmsFireData[] = [];
     
+    // Process each line of the CSV data
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i]) continue;
       
@@ -175,7 +188,10 @@ export async function fetchAndUpdateWildfires() {
       const fireData: any = {};
       
       headers.forEach((header: string, index: number) => {
+        if (index >= values.length) return;
         const value = values[index];
+        
+        // Convert numeric values to numbers
         if (header === 'latitude' || header === 'longitude' || header === 'brightness' || 
             header === 'scan' || header === 'track' || header === 'confidence' || 
             header === 'bright_t31' || header === 'frp') {
@@ -185,7 +201,7 @@ export async function fetchAndUpdateWildfires() {
         }
       });
       
-      // Filter fires by bounds for this demo
+      // Filter fires by geographic bounds
       if (fireData.latitude >= southBound && fireData.latitude <= northBound &&
           fireData.longitude >= westBound && fireData.longitude <= eastBound) {
         firmsData.push(fireData as FirmsFireData);

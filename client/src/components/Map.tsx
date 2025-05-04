@@ -201,7 +201,7 @@ const Map: React.FC<MapProps> = ({
           const perimeterCoords = JSON.parse(wildfire.perimeterCoordinates);
           
           // Check if we need to add the source
-          if (!map.current.getSource(sourceId)) {
+          if (map.current && !map.current.getSource(sourceId)) {
             map.current.addSource(sourceId, {
               type: 'geojson',
               data: {
@@ -209,18 +209,18 @@ const Map: React.FC<MapProps> = ({
                 properties: {},
                 geometry: {
                   type: 'Polygon',
-                  coordinates: [perimeterCoords.map(coord => [coord.lng, coord.lat])]
+                  coordinates: [perimeterCoords.map((coord: {lng: number, lat: number}) => [coord.lng, coord.lat])]
                 }
               }
             });
           }
           
           // If the layer exists but we shouldn't show it
-          if (hasLayer && !shouldShowPerimeters) {
+          if (map.current && hasLayer && !shouldShowPerimeters) {
             map.current.setLayoutProperty(layerId, 'visibility', 'none');
           } 
           // If the layer doesn't exist but we should show it
-          else if (!hasLayer && shouldShowPerimeters) {
+          else if (map.current && !hasLayer && shouldShowPerimeters) {
             // Get color based on severity
             const color = wildfire.severity === 'high' ? '#D32F2F' : 
                           wildfire.severity === 'medium' ? '#FFA000' : 
@@ -254,7 +254,7 @@ const Map: React.FC<MapProps> = ({
             perimeterLayersRef.current[layerId] = true;
           } 
           // If the layer exists and we should show it
-          else if (hasLayer && shouldShowPerimeters) {
+          else if (map.current && hasLayer && shouldShowPerimeters) {
             map.current.setLayoutProperty(layerId, 'visibility', 'visible');
             map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'visible');
           }
