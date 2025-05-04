@@ -19,7 +19,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           variant="ghost"
           size="sm"
           className={`px-3 py-1.5 flex items-center text-sm font-medium rounded-md ${
-            activeView === 'map' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-gray-100'
+            activeView === 'map' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-red-50 hover:text-red-600'
           }`}
           onClick={() => onViewChange('map')}
         >
@@ -30,7 +30,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           variant="ghost"
           size="sm"
           className={`px-3 py-1.5 flex items-center text-sm font-medium rounded-md ${
-            activeView === 'fires' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-gray-100'
+            activeView === 'fires' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-red-50 hover:text-red-600'
           }`}
           onClick={() => onViewChange('fires')}
         >
@@ -41,7 +41,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           variant="ghost"
           size="sm"
           className={`px-3 py-1.5 flex items-center text-sm font-medium rounded-md ${
-            activeView === 'airQuality' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-gray-100'
+            activeView === 'airQuality' ? 'bg-primary/20 text-primary border border-primary/50 font-bold' : 'hover:bg-red-50 hover:text-red-600'
           }`}
           onClick={() => onViewChange('airQuality')}
         >
@@ -51,7 +51,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="px-3 py-1.5 flex items-center text-sm font-medium hover:bg-gray-100 rounded-md"
+          className="px-3 py-1.5 flex items-center text-sm font-medium hover:bg-red-50 hover:text-red-600 rounded-md"
           onClick={onFilterToggle}
         >
           <span className="material-icons text-sm mr-1">filter_alt</span>
