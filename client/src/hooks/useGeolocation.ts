@@ -47,6 +47,13 @@ export function useGeolocation(): GeolocationHook {
             errorMessage = 'The request to get user location timed out';
             break;
         }
+        
+        // If location permission denied, use a default location in the USA (California)
+        setPosition({
+          latitude: 36.7783,  // California - a state with frequent wildfires
+          longitude: -119.4179
+        });
+        
         setError(errorMessage);
         setLoading(false);
       },
