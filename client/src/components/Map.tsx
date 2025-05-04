@@ -128,7 +128,7 @@ const Map: React.FC<MapProps> = ({
     if (mapContainer.current && !map.current) {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/outdoors-v12',
+        style: 'mapbox://styles/mapbox/light-v11', // Lighter map style that's easier on the eyes
         center: [initialPosition?.longitude || defaultPosition.longitude, initialPosition?.latitude || defaultPosition.latitude],
         zoom: initialPosition?.zoom || defaultPosition.zoom,
         bounds: [usaBounds.west, usaBounds.south, usaBounds.east, usaBounds.north],
@@ -145,7 +145,7 @@ const Map: React.FC<MapProps> = ({
               id: 'non-usa-dim',
               type: 'background',
               paint: {
-                'background-color': 'rgba(0, 0, 0, 0.3)'
+                'background-color': 'rgba(0, 0, 0, 0.15)'
               }
             });
             
@@ -356,9 +356,10 @@ const Map: React.FC<MapProps> = ({
           dotEl.className = 'rounded-full';
           dotEl.style.width = '16px';
           dotEl.style.height = '16px';
-          dotEl.style.backgroundColor = wildfire.severity === 'high' ? '#D32F2F' : 
-                                        wildfire.severity === 'medium' ? '#FFA000' : 
-                                        wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
+          // Softer, easier-on-the-eyes colors
+          dotEl.style.backgroundColor = wildfire.severity === 'high' ? '#FF8A80' : 
+                                        wildfire.severity === 'medium' ? '#FFD180' : 
+                                        wildfire.severity === 'low' ? '#CCFF90' : '#B9F6CA';
           
           markerEl.appendChild(dotEl);
           
@@ -435,10 +436,10 @@ const Map: React.FC<MapProps> = ({
         }
       }
       
-      // Get color based on severity
-      const color = wildfire.severity === 'high' ? '#D32F2F' : 
-                    wildfire.severity === 'medium' ? '#FFA000' : 
-                    wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
+      // Get color based on severity - using softer colors to match markers
+      const color = wildfire.severity === 'high' ? '#FF8A80' : 
+                    wildfire.severity === 'medium' ? '#FFD180' : 
+                    wildfire.severity === 'low' ? '#CCFF90' : '#B9F6CA';
       
       // Add the fill layer
       try {
