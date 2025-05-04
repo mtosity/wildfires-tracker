@@ -1,6 +1,7 @@
 import { db } from "./index";
 import * as schema from "@shared/schema";
 import { v4 as uuidv4 } from "uuid";
+import { eq } from "drizzle-orm";
 
 async function seed() {
   try {
@@ -191,7 +192,7 @@ async function seed() {
         // Update the existing wildfire with perimeter coordinates
         await db.update(schema.wildfires)
           .set({ perimeterCoordinates: wildfire.perimeterCoordinates })
-          .where(wildfire => wildfire.id.equals(wildfire.id));
+          .where(eq(schema.wildfires.id, wildfire.id));
         console.log(`Updated wildfire: ${wildfire.name} with perimeter coordinates`);
       }
     }

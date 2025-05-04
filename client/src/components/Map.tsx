@@ -25,7 +25,9 @@ const Map: React.FC<MapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const perimeterLayersRef = useRef<{ [key: string]: boolean }>({});
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState<number>(4);
 
   const defaultPosition = {
     latitude: 39.8283,
@@ -60,6 +62,13 @@ const Map: React.FC<MapProps> = ({
           if (bounds) {
             onMapMove(bounds);
           }
+        }
+      });
+      
+      // Track zoom level changes
+      map.current.on('zoom', () => {
+        if (map.current) {
+          setCurrentZoom(map.current.getZoom());
         }
       });
     }
@@ -171,6 +180,90 @@ const Map: React.FC<MapProps> = ({
       }
     });
   }, [wildfires, selectedWildfire, mapLoaded, onWildfireSelect]);
+
+  // Handle fire perimeter rendering based on zoom level
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    
+    // Only show perimeters when zoomed in enough
+    const shouldShowPerimeters = currentZoom >= 9;
+    console.log("Current zoom:", currentZoom, "Show perimeters:", shouldShowPerimeters);
+    
+    wildfires.forEach(wildfire => {
+      const sourceId = `perimeter-source-${wildfire.id}`;
+      const layerId = `perimeter-layer-${wildfire.id}`;
+      const hasLayer = perimeterLayersRef.current[layerId];
+      
+      // If we have perimeter data for this wildfire
+      if (wildfire.perimeterCoordinates) {
+        try {
+          // Parse perimeter coordinates
+          const perimeterCoords = JSON.parse(wildfire.perimeterCoordinates);
+          
+          // Check if we need to add the source
+          if (!map.current.getSource(sourceId)) {
+            map.current.addSource(sourceId, {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'Polygon',
+                  coordinates: [perimeterCoords.map(coord => [coord.lng, coord.lat])]
+                }
+              }
+            });
+          }
+          
+          // If the layer exists but we shouldn't show it
+          if (hasLayer && !shouldShowPerimeters) {
+            map.current.setLayoutProperty(layerId, 'visibility', 'none');
+          } 
+          // If the layer doesn't exist but we should show it
+          else if (!hasLayer && shouldShowPerimeters) {
+            // Get color based on severity
+            const color = wildfire.severity === 'high' ? '#D32F2F' : 
+                          wildfire.severity === 'medium' ? '#FFA000' : 
+                          wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
+                          
+            // Add layer if it doesn't exist
+            map.current.addLayer({
+              id: layerId,
+              source: sourceId,
+              type: 'fill',
+              paint: {
+                'fill-color': color,
+                'fill-opacity': 0.3,
+                'fill-outline-color': color
+              }
+            });
+            
+            // Add outline layer
+            map.current.addLayer({
+              id: `${layerId}-outline`,
+              source: sourceId,
+              type: 'line',
+              paint: {
+                'line-color': color,
+                'line-width': 2,
+                'line-opacity': 0.8
+              }
+            });
+            
+            // Track that we've added this layer
+            perimeterLayersRef.current[layerId] = true;
+          } 
+          // If the layer exists and we should show it
+          else if (hasLayer && shouldShowPerimeters) {
+            map.current.setLayoutProperty(layerId, 'visibility', 'visible');
+            map.current.setLayoutProperty(`${layerId}-outline`, 'visibility', 'visible');
+          }
+        } catch (error) {
+          console.error("Error rendering perimeter for wildfire:", wildfire.id, error);
+        }
+      }
+    });
+  }, [wildfires, mapLoaded, currentZoom]);
 
   // Fly to the selected wildfire
   useEffect(() => {
