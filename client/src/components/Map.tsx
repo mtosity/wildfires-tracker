@@ -87,6 +87,8 @@ const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
+    console.log("Rendering wildfires on map:", wildfires.length);
+
     // Remove markers that no longer exist in the data
     Object.keys(markersRef.current).forEach(id => {
       if (!wildfires.find(w => w.id === id)) {
@@ -97,15 +99,29 @@ const Map: React.FC<MapProps> = ({
 
     // Add or update markers
     wildfires.forEach(wildfire => {
+      console.log("Processing wildfire:", wildfire.id, wildfire.name);
+      
       if (!markersRef.current[wildfire.id]) {
         // Create marker element
         const markerEl = document.createElement('div');
         markerEl.id = `marker-${wildfire.id}`;
         markerEl.className = 'marker-container';
+        
+        // Add a simple marker style to directly see if markers are being added
+        markerEl.style.width = '20px';
+        markerEl.style.height = '20px';
+        markerEl.style.borderRadius = '50%';
+        markerEl.style.backgroundColor = wildfire.severity === 'high' ? '#D32F2F' : 
+                                       wildfire.severity === 'medium' ? '#FFA000' : 
+                                       wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
+        
         document.body.appendChild(markerEl);
 
         // Create the marker
-        const marker = new mapboxgl.Marker(markerEl)
+        const marker = new mapboxgl.Marker({
+          element: markerEl,
+          anchor: 'center'
+        })
           .setLngLat([wildfire.longitude, wildfire.latitude])
           .addTo(map.current!);
 
@@ -117,6 +133,8 @@ const Map: React.FC<MapProps> = ({
         });
 
         markersRef.current[wildfire.id] = marker;
+        
+        console.log("Added marker for wildfire:", wildfire.id);
       } else {
         // Update marker position if needed
         markersRef.current[wildfire.id].setLngLat([wildfire.longitude, wildfire.latitude]);
@@ -126,13 +144,28 @@ const Map: React.FC<MapProps> = ({
       const markerEl = document.getElementById(`marker-${wildfire.id}`);
       if (markerEl) {
         const isSelected = selectedWildfire?.id === wildfire.id;
-        createPortal(
-          <FireMarker 
-            wildfire={wildfire} 
-            isSelected={isSelected}
-          />,
-          markerEl
-        );
+        try {
+          // Create simple content directly instead of using createPortal
+          markerEl.innerHTML = '';
+          const dotEl = document.createElement('div');
+          dotEl.className = `w-4 h-4 rounded-full ${
+            wildfire.severity === 'high' ? 'bg-[#D32F2F]' :
+            wildfire.severity === 'medium' ? 'bg-[#FFA000]' :
+            wildfire.severity === 'low' ? 'bg-[#689F38]' : 'bg-[#2E7D32]'
+          }`;
+          
+          if (isSelected) {
+            dotEl.style.transform = 'scale(1.5)';
+            const labelEl = document.createElement('div');
+            labelEl.className = 'text-xs font-medium bg-white px-1 py-0.5 rounded shadow-sm mt-1 whitespace-nowrap';
+            labelEl.innerText = wildfire.name;
+            markerEl.appendChild(labelEl);
+          }
+          
+          markerEl.appendChild(dotEl);
+        } catch (error) {
+          console.error("Error rendering marker:", error);
+        }
       }
     });
   }, [wildfires, selectedWildfire, mapLoaded, onWildfireSelect]);
