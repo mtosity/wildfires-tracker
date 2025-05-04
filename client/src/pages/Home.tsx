@@ -101,7 +101,7 @@ const Home = () => {
     if (position && typeof window !== 'undefined' && (window as any).mapInstance) {
       (window as any).mapInstance.flyTo({
         center: [position.longitude, position.latitude],
-        zoom: 10
+        zoom: 5  // Lower zoom to show more of the US around the user's location
       });
     }
   }, [getPosition, position]);

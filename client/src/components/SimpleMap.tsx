@@ -167,10 +167,10 @@ const SimpleMap: React.FC<MapProps> = ({
     // Store the marker reference
     userMarkerRef.current = marker;
     
-    // Fly to user location
+    // Fly to user location with lower zoom to show more context
     map.current.flyTo({
       center: [userLocation.longitude, userLocation.latitude],
-      zoom: 10,
+      zoom: 5, // Lower zoom level to show more of the US
       duration: 2000
     });
     
@@ -181,10 +181,10 @@ const SimpleMap: React.FC<MapProps> = ({
     if (!map.current || !mapLoaded) return;
     
     if (selectedWildfire) {
-      // Zoom to selected wildfire
+      // Zoom to selected wildfire with moderate zoom
       map.current.flyTo({
         center: [selectedWildfire.longitude, selectedWildfire.latitude],
-        zoom: 12,
+        zoom: 7, // Moderate zoom level to maintain context of surrounding area
         duration: 2000
       });
       
