@@ -57,7 +57,9 @@ const Map: React.FC<MapProps> = ({
       map.current.on('moveend', () => {
         if (map.current && onMapMove) {
           const bounds = map.current.getBounds();
-          onMapMove(bounds);
+          if (bounds) {
+            onMapMove(bounds);
+          }
         }
       });
     }

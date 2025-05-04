@@ -34,44 +34,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get a specific wildfire by ID
-  app.get(`${apiPrefix}/wildfires/:id`, async (req, res) => {
-    try {
-      const wildfire = await storage.getWildfireById(req.params.id);
-      
-      if (!wildfire) {
-        return res.status(404).json({ message: "Wildfire not found" });
-      }
-      
-      res.json({ wildfire });
-    } catch (error) {
-      console.error("Error fetching wildfire:", error);
-      res.status(500).json({ message: "Failed to fetch wildfire data" });
-    }
-  });
-
-  // Get nearby wildfires
-  app.get(`${apiPrefix}/wildfires/nearby`, async (req, res) => {
-    try {
-      const { latitude, longitude, radius = 100 } = req.query;
-      
-      if (!latitude || !longitude) {
-        return res.json({ wildfires: [] });
-      }
-      
-      const nearbyWildfires = await storage.getNearbyWildfires(
-        parseFloat(latitude as string),
-        parseFloat(longitude as string),
-        parseFloat(radius as string)
-      );
-      
-      res.json({ wildfires: nearbyWildfires });
-    } catch (error) {
-      console.error("Error fetching nearby wildfires:", error);
-      res.json({ wildfires: [] });
-    }
-  });
-
   // Get wildfire statistics
   app.get(`${apiPrefix}/wildfires/stats`, async (req, res) => {
     try {
@@ -101,6 +63,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nearbyFiresCount: 0
         }
       });
+    }
+  });
+
+  // Get nearby wildfires
+  app.get(`${apiPrefix}/wildfires/nearby`, async (req, res) => {
+    try {
+      const { latitude, longitude, radius = 100 } = req.query;
+      
+      if (!latitude || !longitude) {
+        return res.json({ wildfires: [] });
+      }
+      
+      const nearbyWildfires = await storage.getNearbyWildfires(
+        parseFloat(latitude as string),
+        parseFloat(longitude as string),
+        parseFloat(radius as string)
+      );
+      
+      res.json({ wildfires: nearbyWildfires });
+    } catch (error) {
+      console.error("Error fetching nearby wildfires:", error);
+      res.json({ wildfires: [] });
+    }
+  });
+
+  // Get a specific wildfire by ID - this must be after other /wildfires/* routes
+  app.get(`${apiPrefix}/wildfires/:id`, async (req, res) => {
+    try {
+      const wildfire = await storage.getWildfireById(req.params.id);
+      
+      if (!wildfire) {
+        return res.status(404).json({ message: "Wildfire not found" });
+      }
+      
+      res.json({ wildfire });
+    } catch (error) {
+      console.error("Error fetching wildfire:", error);
+      res.status(500).json({ message: "Failed to fetch wildfire data" });
     }
   });
 
