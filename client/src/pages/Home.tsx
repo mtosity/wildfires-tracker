@@ -18,9 +18,21 @@ import {
   useNearbyWildfires,
 } from "@/hooks/useWildfireData";
 import { useMobile } from "@/hooks/use-mobile";
-import { Wildfire, Alert, MapBounds, WildfireStats } from "@/types/wildfire";
+import { Wildfire, Alert, MapBounds, WildfireStats, MapPosition } from "@/types/wildfire";
 import mapboxgl from "mapbox-gl";
 import { useToast } from "@/hooks/use-toast";
+
+// Extend Window interface to include mapInstance
+declare global {
+  interface Window {
+    mapInstance?: {
+      flyTo: (options: { center: [number, number]; zoom: number; essential?: boolean; duration?: number }) => void;
+      zoomIn: () => void;
+      zoomOut: () => void;
+      getBounds: () => mapboxgl.LngLatBounds | undefined;
+    };
+  }
+}
 
 const Home = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -105,27 +117,20 @@ const Home = () => {
   }, []);
 
   const handleZoomIn = useCallback(() => {
-    if (mapInstance) {
-      mapInstance.zoomIn();
+    if (window.mapInstance) {
+      window.mapInstance.zoomIn();
     }
-  }, [mapInstance]);
+  }, []);
 
   const handleZoomOut = useCallback(() => {
-    if (mapInstance) {
-      mapInstance.zoomOut();
+    if (window.mapInstance) {
+      window.mapInstance.zoomOut();
     }
-  }, [mapInstance]);
+  }, []);
 
   const handleLocateMe = useCallback(() => {
     getPosition();
-
-    if (position && mapInstance) {
-      mapInstance.flyTo({
-        center: [position.longitude, position.latitude],
-        zoom: 10,
-      });
-    }
-  }, [getPosition, position, mapInstance]);
+  }, [getPosition]);
 
   const handleGetDirections = useCallback(() => {
     if (selectedWildfire) {
@@ -171,6 +176,26 @@ const Home = () => {
   const handleDismissAlert = useCallback((alertId: string) => {
     setDismissedAlerts((prev) => [...prev, alertId]);
   }, []);
+  
+  // Using a state variable instead of a ref to handle alert click
+  const [alertTargetWildfire, setAlertTargetWildfire] = useState<Wildfire | null>(null);
+  
+  const handleAlertClick = useCallback((alert: Alert) => {
+    // Check if the alert is associated with a wildfire
+    if (alert.wildfireId) {
+      // Find the wildfire from the current wildfires array
+      const relatedWildfire = wildfires.find(fire => fire.id === alert.wildfireId);
+      
+      if (relatedWildfire) {
+        // Select the wildfire and zoom to it
+        handleWildfireSelect(relatedWildfire);
+        
+        // Set this as our target wildfire to focus on - this will cause
+        // our Map component to get new props and re-center
+        setAlertTargetWildfire(relatedWildfire);
+      }
+    }
+  }, [wildfires, handleWildfireSelect]);
 
   const handleSubscribeToAlerts = useCallback(() => {
     if (selectedWildfire) {
@@ -190,6 +215,11 @@ const Home = () => {
         onWildfireSelect={handleWildfireSelect}
         selectedWildfire={selectedWildfire}
         userLocation={position}
+        initialPosition={alertTargetWildfire ? {
+          latitude: alertTargetWildfire.latitude,
+          longitude: alertTargetWildfire.longitude,
+          zoom: 12
+        } : undefined}
       />
 
       {/* Header */}
@@ -281,6 +311,7 @@ const Home = () => {
         <AlertBanner
           alert={activeAlerts[0]}
           onClose={() => handleDismissAlert(activeAlerts[0].id)}
+          onAlertClick={() => handleAlertClick(activeAlerts[0])}
         />
       )}
     </div>

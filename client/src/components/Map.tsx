@@ -5,6 +5,7 @@ import { Wildfire, MapPosition } from '@/types/wildfire';
 import Supercluster from 'supercluster';
 import FireMarker from './FireMarker';
 
+// Define the interface for the map component
 interface MapProps {
   wildfires: Wildfire[];
   onMapMove?: (bounds: mapboxgl.LngLatBounds) => void;
@@ -242,7 +243,7 @@ const Map: React.FC<MapProps> = ({
         map.current = null;
       }
     };
-  }, [initialPosition, throttle]);
+  }, [initialPosition, throttle, onMapMove]);
 
   // Handle user location updates
   useEffect(() => {
@@ -441,206 +442,159 @@ const Map: React.FC<MapProps> = ({
       
       // Add source if it doesn't exist
       if (!map.current.getSource(sourceId)) {
-        try {
-          map.current.addSource(sourceId, {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {},
-              geometry: {
-                type: 'Polygon',
-                coordinates: [perimeterCoords.map((coord: {lng: number, lat: number}) => [coord.lng, coord.lat])]
-              }
+        map.current.addSource(sourceId, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'Polygon',
+              coordinates: [perimeterCoords]
             }
-          });
-        } catch (sourceError) {
-          console.error("Error adding source for wildfire:", wildfire.id, sourceError);
-          return;
-        }
+          }
+        });
       }
       
-      // Get color based on severity - using softer colors to match markers
-      const color = wildfire.severity === 'high' ? '#FF8A80' : 
-                    wildfire.severity === 'medium' ? '#FFD180' : 
-                    wildfire.severity === 'low' ? '#CCFF90' : '#B9F6CA';
-      
-      // Add the fill layer
-      try {
+      // Add fill layer
+      if (!map.current.getLayer(layerId)) {
         map.current.addLayer({
           id: layerId,
-          source: sourceId,
           type: 'fill',
+          source: sourceId,
           paint: {
-            'fill-color': color,
-            'fill-opacity': 0.3,
-            'fill-outline-color': color
+            'fill-color': 
+              wildfire.severity === 'high' ? '#FF5252' : 
+              wildfire.severity === 'medium' ? '#FFB74D' : 
+              wildfire.severity === 'low' ? '#AED581' : '#81C784',
+            'fill-opacity': 0.4
           }
         });
         
         // Add outline layer
         map.current.addLayer({
           id: `${layerId}-outline`,
-          source: sourceId,
           type: 'line',
+          source: sourceId,
           paint: {
-            'line-color': color,
-            'line-width': 2,
-            'line-opacity': 0.8
+            'line-color': 
+              wildfire.severity === 'high' ? '#F44336' : 
+              wildfire.severity === 'medium' ? '#FF9800' : 
+              wildfire.severity === 'low' ? '#8BC34A' : '#4CAF50',
+            'line-width': 2
           }
         });
         
-        // Track that we've added this layer
+        // Remember we've added this layer
         perimeterLayersRef.current[layerId] = true;
-      } catch (layerError) {
-        console.error("Error adding layer for wildfire:", wildfire.id, layerError);
+      }
+      
+      // Fly to perimeter location
+      const coordinates = perimeterCoords;
+      if (coordinates.length > 0) {
+        // Calculate bounds of perimeter
+        const bounds = coordinates.reduce((bounds, coordinate) => {
+          const [lng, lat] = coordinate;
+          
+          // Initialize bounds if empty
+          if (!bounds.north) {
+            return {
+              north: lat,
+              south: lat,
+              east: lng,
+              west: lng
+            };
+          }
+          
+          // Update bounds
+          return {
+            north: Math.max(bounds.north, lat),
+            south: Math.min(bounds.south, lat),
+            east: Math.max(bounds.east, lng),
+            west: Math.min(bounds.west, lng)
+          };
+        }, { north: 0, south: 0, east: 0, west: 0 });
+        
+        // Fit map to perimeter with padding
+        map.current.fitBounds([
+          [bounds.west, bounds.south],
+          [bounds.east, bounds.north]
+        ], {
+          padding: 80,
+          duration: 1500
+        });
       }
     } catch (error) {
-      console.error("Error rendering perimeter for wildfire:", wildfire.id, error);
+      console.error("Error adding wildfire perimeter:", error);
     }
   }, [mapLoaded]);
-  
-  // Hide all perimeters
+
+  // Hide any existing perimeter layers
   const hideAllPerimeters = useCallback(() => {
-    if (!map.current) return;
+    if (!map.current || !mapLoaded) return;
     
     Object.keys(perimeterLayersRef.current).forEach(layerId => {
       try {
-        const outlineLayerId = layerId + '-outline';
         map.current?.setLayoutProperty(layerId, 'visibility', 'none');
-        map.current?.setLayoutProperty(outlineLayerId, 'visibility', 'none');
+        map.current?.setLayoutProperty(`${layerId}-outline`, 'visibility', 'none');
       } catch (error) {
-        console.error("Error hiding perimeter layer:", layerId, error);
+        console.error(`Error hiding perimeter layer ${layerId}:`, error);
       }
     });
-  }, []);
-  
-  // Hide all markers
-  const hideAllMarkers = useCallback(() => {
-    if (!map.current) return;
-    
-    Object.values(markersRef.current).forEach(marker => {
-      marker.getElement().style.display = 'none';
-    });
-  }, []);
-  
-  // Show all markers
-  const showAllMarkers = useCallback(() => {
-    if (!map.current) return;
-    
-    Object.values(markersRef.current).forEach(marker => {
-      marker.getElement().style.display = 'block';
-    });
-  }, []);
-  
-  // Show perimeter for selected wildfire and hide markers
-  // Monitor theme changes and update map style
+  }, [mapLoaded]);
+
+  // Handle selected wildfire changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
     
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (
-          mutation.type === 'attributes' &&
-          mutation.attributeName === 'class' &&
-          map.current
-        ) {
-          const isDarkMode = getThemeMode() === 'dark';
-          
-          // Update map style
-          map.current.setStyle(
-            isDarkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11'
-          );
-          
-          // After style change, restore USA highlight and layers
-          map.current.once('style.load', () => {
-            if (map.current) {
-              try {
-                // Restore USA highlight
-                map.current.addLayer({
-                  id: 'non-usa-dim',
-                  type: 'background',
-                  paint: {
-                    'background-color': 'rgba(0, 0, 0, 0.15)'
-                  }
-                });
-                
-                map.current.addLayer({
-                  id: 'usa-highlight',
-                  type: 'fill',
-                  source: {
-                    type: 'geojson',
-                    data: {
-                      type: 'Feature',
-                      properties: {},
-                      geometry: {
-                        type: 'Polygon',
-                        coordinates: [[
-                          [usaBounds.west, usaBounds.south],
-                          [usaBounds.west, usaBounds.north],
-                          [usaBounds.east, usaBounds.north],
-                          [usaBounds.east, usaBounds.south],
-                          [usaBounds.west, usaBounds.south]
-                        ]]
-                      }
-                    }
-                  },
-                  paint: {
-                    'fill-color': 'transparent',
-                    'fill-opacity': 0
-                  }
-                }, 'non-usa-dim');
-              } catch (error) {
-                console.error("Error restoring USA highlight after style change:", error);
-              }
-            }
-          });
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [mapLoaded, usaBounds]);
-
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return;
-    
-    // First hide all perimeters
-    hideAllPerimeters();
-    
+    // Clear existing markers when a wildfire is selected
     if (selectedWildfire) {
-      // Hide all markers when a wildfire is selected to focus on perimeter
-      hideAllMarkers();
+      clearAllMarkers();
       
-      // If we have perimeter data, show it
-      if (selectedWildfire.perimeterCoordinates) {
-        addPerimeterForWildfire(selectedWildfire);
-      }
+      // Hide any other perimeter layers
+      hideAllPerimeters();
+      
+      // Add perimeter for the selected wildfire
+      addPerimeterForWildfire(selectedWildfire);
     } else {
-      // Show all markers when no wildfire is selected
-      showAllMarkers();
+      // Hide all perimeters when no wildfire is selected
+      hideAllPerimeters();
     }
-  }, [selectedWildfire, mapLoaded, addPerimeterForWildfire, hideAllPerimeters, hideAllMarkers, showAllMarkers]);
+  }, [selectedWildfire, mapLoaded, clearAllMarkers, hideAllPerimeters, addPerimeterForWildfire]);
 
-  // Fly to the selected wildfire
-  useEffect(() => {
-    if (map.current && selectedWildfire && mapLoaded) {
-      // Use a higher zoom level if the wildfire has perimeter data
-      const zoomLevel = selectedWildfire.perimeterCoordinates ? 12 : 10;
-      
-      map.current.flyTo({
-        center: [selectedWildfire.longitude, selectedWildfire.latitude],
-        zoom: zoomLevel,
-        essential: true
-      });
+  // Imperative methods to expose to parent components
+  React.useEffect(() => {
+    // Make the map methods available to the parent through window.mapInstance
+    if (map.current && mapLoaded) {
+      window.mapInstance = {
+        flyTo: (options: { center: [number, number]; zoom: number; essential?: boolean; duration?: number }) => {
+          if (map.current) {
+            map.current.flyTo(options);
+          }
+        },
+        zoomIn: () => {
+          if (map.current) {
+            map.current.zoomIn();
+          }
+        },
+        zoomOut: () => {
+          if (map.current) {
+            map.current.zoomOut();
+          }
+        },
+        getBounds: () => {
+          if (map.current) {
+            return map.current.getBounds();
+          }
+          return undefined;
+        }
+      };
     }
-  }, [selectedWildfire, mapLoaded]);
+    
+    return () => {
+      // Clean up when the component unmounts
+      window.mapInstance = undefined;
+    };
+  }, [mapLoaded]);
 
   return (
     <div ref={mapContainer} className="w-full h-full absolute top-0 left-0">
