@@ -3,9 +3,8 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Wildfire, MapPosition } from '@/types/wildfire';
 import Supercluster from 'supercluster';
-import FireMarker from './FireMarker';
 
-// USA Bounding Box - define it outside component for global usage
+// USA Bounding Box
 const usaBounds = {
   north: 49.5,  // Northern border with Canada
   south: 24.5,  // Southern border with Mexico
