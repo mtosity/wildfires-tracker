@@ -192,6 +192,12 @@ const Map: React.FC<MapProps> = ({
   // Handle clusters and markers
   useEffect(() => {
     if (!map.current || !mapLoaded || !viewportBounds) return;
+    
+    // Skip rendering markers when there's a selected wildfire (we want to hide them all)
+    if (selectedWildfire) {
+      console.log("Skipping marker rendering because a wildfire is selected");
+      return;
+    }
 
     console.log("Rendering map with clusters:", clusters.length);
     
@@ -276,18 +282,6 @@ const Map: React.FC<MapProps> = ({
           dotEl.style.backgroundColor = wildfire.severity === 'high' ? '#D32F2F' : 
                                         wildfire.severity === 'medium' ? '#FFA000' : 
                                         wildfire.severity === 'low' ? '#689F38' : '#2E7D32';
-          
-          // Add selection styling
-          const isSelected = selectedWildfire?.id === wildfire.id;
-          if (isSelected) {
-            dotEl.style.transform = 'scale(1.5)';
-            dotEl.style.boxShadow = '0 0 0 2px white, 0 0 0 4px #0288D1';
-            
-            const labelEl = document.createElement('div');
-            labelEl.className = 'text-xs font-medium bg-white px-1 py-0.5 rounded shadow-sm mt-1 whitespace-nowrap';
-            labelEl.innerText = wildfire.name;
-            markerEl.appendChild(labelEl);
-          }
           
           markerEl.appendChild(dotEl);
           
