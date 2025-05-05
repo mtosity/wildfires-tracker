@@ -34,6 +34,7 @@ const Map: React.FC<MapProps> = ({
   const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const clusterMarkersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const perimeterLayersRef = useRef<{ [key: string]: boolean }>({});
+  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [currentZoom, setCurrentZoom] = useState<number>(4);
   const [viewportBounds, setViewportBounds] = useState<mapboxgl.LngLatBounds | null>(null);
@@ -195,6 +196,13 @@ const Map: React.FC<MapProps> = ({
     }
 
     return () => {
+      // Remove user location marker if it exists
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.remove();
+        userLocationMarkerRef.current = null;
+      }
+      
+      // Remove the map
       if (map.current) {
         map.current.remove();
         map.current = null;
@@ -202,10 +210,45 @@ const Map: React.FC<MapProps> = ({
     };
   }, [initialPosition, throttle]);
 
+  // Create or update the user location marker
+  const createUserLocationMarker = useCallback((lng: number, lat: number) => {
+    if (!map.current) return;
+    
+    // If we already have a marker, just update its position
+    if (userLocationMarkerRef.current) {
+      userLocationMarkerRef.current.setLngLat([lng, lat]);
+      return;
+    }
+    
+    // Create a new marker element
+    const el = document.createElement('div');
+    el.className = 'w-5 h-5 relative flex items-center justify-center';
+    
+    // Add a pulsing effect
+    const pulseRing = document.createElement('div');
+    pulseRing.className = 'absolute w-full h-full bg-blue-500 opacity-70 rounded-full animate-ping';
+    el.appendChild(pulseRing);
+    
+    // Add the center marker dot
+    const centerDot = document.createElement('div');
+    centerDot.className = 'absolute w-3 h-3 bg-blue-600 rounded-full border-2 border-white z-10';
+    el.appendChild(centerDot);
+    
+    // Create and store the marker
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat([lng, lat])
+      .addTo(map.current);
+    
+    userLocationMarkerRef.current = marker;
+  }, []);
+  
   // Handle user location updates
   useEffect(() => {
     if (map.current && userLocation && mapLoaded) {
-      // Just fly to user location without adding a marker
+      // Create or update user location marker
+      createUserLocationMarker(userLocation.longitude, userLocation.latitude);
+      
+      // Fly to user location
       map.current.flyTo({
         center: [userLocation.longitude, userLocation.latitude],
         zoom: 6, // Zoom level that shows the user location and surrounding region
@@ -213,7 +256,7 @@ const Map: React.FC<MapProps> = ({
         duration: 2000
       });
     }
-  }, [userLocation, mapLoaded]);
+  }, [userLocation, mapLoaded, createUserLocationMarker]);
 
   // Clear all markers
   const clearAllMarkers = useCallback(() => {
@@ -495,6 +538,11 @@ const Map: React.FC<MapProps> = ({
             if (map.current) {
               try {
                 // Style loaded successfully
+                
+                // If we have a user location, restore the marker
+                if (userLocation) {
+                  createUserLocationMarker(userLocation.longitude, userLocation.latitude);
+                }
               } catch (error) {
                 console.error("Error restoring map style after change:", error);
               }
@@ -512,7 +560,7 @@ const Map: React.FC<MapProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [mapLoaded]);
+  }, [mapLoaded, createUserLocationMarker, userLocation]);
 
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
