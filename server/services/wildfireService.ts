@@ -150,11 +150,11 @@ export async function fetchAndUpdateWildfires() {
     console.log('Fetching wildfire data from NASA FIRMS API...');
     
     // Use the NASA FIRMS API to get active fire data
-    // North America region for demo (modify as needed)
-    const northBound = 50;
-    const southBound = 25;
-    const eastBound = -60;
-    const westBound = -130;
+    // Using global coordinate boundaries
+    const northBound = 90;  // North pole
+    const southBound = -90; // South pole
+    const eastBound = 180;  // International Date Line East
+    const westBound = -180; // International Date Line West
     
     // Use the NASA FIRMS API with the provided API key
     const apiKey = process.env.NASA_FIRMS_API_KEY;
