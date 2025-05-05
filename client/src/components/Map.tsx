@@ -42,19 +42,11 @@ const Map: React.FC<MapProps> = ({
     initialPosition?.latitude || 39.8283
   ]);
   
-  // USA-focused position and bounds
+  // World view position
   const defaultPosition = {
-    latitude: 39.8283,
-    longitude: -98.5795,
-    zoom: 3.5
-  };
-  
-  // USA Bounding Box
-  const usaBounds = {
-    north: 49.5,  // Northern border with Canada
-    south: 24.5,  // Southern border with Mexico
-    west: -125.0, // Western coast
-    east: -66.0   // Eastern coast
+    latitude: 20,
+    longitude: 0,
+    zoom: 2
   };
   
   // Check if a wildfire is active (not contained or 100% contained)
@@ -162,9 +154,7 @@ const Map: React.FC<MapProps> = ({
         // Use dark style for dark mode, light style for light mode
         style: isDarkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
         center: [initialPosition?.longitude || defaultPosition.longitude, initialPosition?.latitude || defaultPosition.latitude],
-        zoom: initialPosition?.zoom || defaultPosition.zoom,
-        bounds: [usaBounds.west, usaBounds.south, usaBounds.east, usaBounds.north],
-        fitBoundsOptions: { padding: 20 }
+        zoom: initialPosition?.zoom || defaultPosition.zoom
       });
 
       map.current.on('load', () => {
@@ -175,53 +165,7 @@ const Map: React.FC<MapProps> = ({
             onMapInit(map.current);
           }
           
-          // Add USA boundary highlight
-          try {
-            // Add a semi-transparent layer to dim non-USA areas
-            map.current.addLayer({
-              id: 'non-usa-dim',
-              type: 'background',
-              paint: {
-                'background-color': 'rgba(0, 0, 0, 0.15)'
-              }
-            });
-            
-            // Add USA shape to create a "hole" in the dim layer
-            map.current.addLayer({
-              id: 'usa-highlight',
-              type: 'fill',
-              source: {
-                type: 'geojson',
-                data: {
-                  type: 'Feature',
-                  properties: {},
-                  geometry: {
-                    type: 'Polygon',
-                    coordinates: [[
-                      [usaBounds.west, usaBounds.south],
-                      [usaBounds.west, usaBounds.north],
-                      [usaBounds.east, usaBounds.north],
-                      [usaBounds.east, usaBounds.south],
-                      [usaBounds.west, usaBounds.south]
-                    ]]
-                  }
-                }
-              },
-              paint: {
-                'fill-color': 'transparent',
-                'fill-opacity': 0
-              }
-            }, 'non-usa-dim');
-            
-            // Set initial bounding box to USA
-            map.current.fitBounds([
-              [usaBounds.west, usaBounds.south],
-              [usaBounds.east, usaBounds.north]
-            ], { padding: 20 });
-          } catch (error) {
-            console.error("Error adding USA highlight:", error);
-          }
-          
+          // Set the initial viewport bounds
           setViewportBounds(map.current.getBounds());
         }
       });
@@ -280,10 +224,10 @@ const Map: React.FC<MapProps> = ({
         .setLngLat([userLocation.longitude, userLocation.latitude])
         .addTo(map.current);
       
-      // Fly to user location with a wider zoom (to show part of the USA)
+      // Fly to user location with an appropriate zoom level
       map.current.flyTo({
         center: [userLocation.longitude, userLocation.latitude],
-        zoom: 5, // Zoom level that shows the user location and surrounding region
+        zoom: 6, // Zoom level that shows the user location and surrounding region
         essential: true,
         duration: 2000
       });
@@ -565,46 +509,13 @@ const Map: React.FC<MapProps> = ({
             isDarkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11'
           );
           
-          // After style change, restore USA highlight and layers
+          // After style change, restore any needed layers
           map.current.once('style.load', () => {
             if (map.current) {
               try {
-                // Restore USA highlight
-                map.current.addLayer({
-                  id: 'non-usa-dim',
-                  type: 'background',
-                  paint: {
-                    'background-color': 'rgba(0, 0, 0, 0.15)'
-                  }
-                });
-                
-                map.current.addLayer({
-                  id: 'usa-highlight',
-                  type: 'fill',
-                  source: {
-                    type: 'geojson',
-                    data: {
-                      type: 'Feature',
-                      properties: {},
-                      geometry: {
-                        type: 'Polygon',
-                        coordinates: [[
-                          [usaBounds.west, usaBounds.south],
-                          [usaBounds.west, usaBounds.north],
-                          [usaBounds.east, usaBounds.north],
-                          [usaBounds.east, usaBounds.south],
-                          [usaBounds.west, usaBounds.south]
-                        ]]
-                      }
-                    }
-                  },
-                  paint: {
-                    'fill-color': 'transparent',
-                    'fill-opacity': 0
-                  }
-                }, 'non-usa-dim');
+                // Style loaded successfully
               } catch (error) {
-                console.error("Error restoring USA highlight after style change:", error);
+                console.error("Error restoring map style after change:", error);
               }
             }
           });
@@ -620,7 +531,7 @@ const Map: React.FC<MapProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [mapLoaded, usaBounds]);
+  }, [mapLoaded]);
 
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
