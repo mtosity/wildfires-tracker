@@ -29,7 +29,35 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    // Extract the base URL from queryKey[0]
+    const baseUrl = queryKey[0] as string;
+    
+    // Check if we have query parameters in the queryKey (position 1, 2, etc.)
+    let url = baseUrl;
+    if (queryKey.length > 1) {
+      // Build URL parameters for items in the queryKey after the baseUrl
+      const params = new URLSearchParams();
+      
+      // Add latitude and longitude if present
+      // When using /api/alerts/active or similar endpoints with location
+      if (baseUrl.includes('/alerts/active') || baseUrl.includes('/wildfires/nearby') || baseUrl.includes('/wildfires/stats')) {
+        const latitude = queryKey[1];
+        const longitude = queryKey[2];
+        const radius = queryKey[3];
+        
+        if (latitude !== null) params.append('latitude', String(latitude));
+        if (longitude !== null) params.append('longitude', String(longitude));
+        if (radius !== undefined) params.append('radius', String(radius));
+      }
+      
+      // Add the params to the URL if we have any
+      if (params.toString()) {
+        url = `${baseUrl}?${params.toString()}`;
+      }
+    }
+    
+    // Make the request with the constructed URL
+    const res = await fetch(url, {
       credentials: "include",
     });
 

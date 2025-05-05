@@ -29,9 +29,10 @@ export function useWildfireStats() {
   });
 }
 
-export function useActiveAlerts() {
+export function useActiveAlerts(latitude: number | null = null, longitude: number | null = null) {
   return useQuery({
-    queryKey: ['/api/alerts/active']
+    queryKey: ['/api/alerts/active', latitude, longitude],
+    enabled: true
   });
 }
 

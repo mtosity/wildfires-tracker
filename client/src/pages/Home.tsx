@@ -48,7 +48,10 @@ const Home = () => {
   // Fetch wildfires data
   const { data: wildfiresData } = useWildfires(mapBounds);
   const { data: statsData } = useWildfireStats();
-  const { data: alertsData } = useActiveAlerts();
+  const { data: alertsData } = useActiveAlerts(
+    position?.latitude || null,
+    position?.longitude || null,
+  );
   const { data: nearbyData } = useNearbyWildfires(
     position?.latitude || null,
     position?.longitude || null,
@@ -61,6 +64,14 @@ const Home = () => {
     nearbyFiresCount: 0,
   };
   const alerts: Alert[] = alertsData?.alerts || [];
+  
+  // Log for debugging
+  useEffect(() => {
+    if (position) {
+      console.log('User position:', position);
+      console.log('Alerts received:', alerts.length > 0 ? 'Yes' : 'No');
+    }
+  }, [position, alerts]);
 
   // Active alerts (filtered by dismissed)
   const activeAlerts = alerts.filter(

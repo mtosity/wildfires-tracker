@@ -142,11 +142,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get active alerts
+  // Get active alerts - with location-based filtering
   app.get(`${apiPrefix}/alerts/active`, async (req, res) => {
     try {
-      const alerts = await storage.getActiveAlerts();
-      res.json({ alerts });
+      const { latitude, longitude } = req.query;
+      
+      console.log(`Alerts API - Location provided: ${!!latitude && !!longitude}`);
+      if (latitude && longitude) {
+        console.log(`Coordinates: ${latitude}, ${longitude}`);
+      }
+      
+      // Retrieve all active alerts
+      const allAlerts = await storage.getActiveAlerts();
+      console.log(`Total active alerts: ${allAlerts.length}`);
+      
+      // If user location is provided, filter alerts to only show those related to nearby fires
+      if (latitude && longitude) {
+        // Get nearby wildfires within 100-mile radius
+        const nearbyWildfires = await storage.getNearbyWildfires(
+          parseFloat(latitude as string),
+          parseFloat(longitude as string),
+          100 // 100 mile radius
+        );
+        
+        console.log(`Nearby wildfires found: ${nearbyWildfires.length}`);
+        
+        // Get the IDs of nearby wildfires
+        const nearbyWildfireIds = nearbyWildfires.map(fire => fire.id);
+        
+        // Filter alerts to only include those related to nearby wildfires
+        const nearbyAlerts = allAlerts.filter(alert => 
+          alert.wildfireId && nearbyWildfireIds.includes(alert.wildfireId)
+        );
+        
+        console.log(`Filtered alerts for nearby fires: ${nearbyAlerts.length}`);
+        res.json({ alerts: nearbyAlerts });
+      } else {
+        // Without location, just return all active alerts
+        console.log(`Returning all alerts (no location filtering)`);
+        res.json({ alerts: allAlerts });
+      }
     } catch (error) {
       console.error("Error fetching active alerts:", error);
       res.status(500).json({ message: "Failed to fetch active alerts" });
