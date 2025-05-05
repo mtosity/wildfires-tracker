@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Button } from "@/components/ui/button";
 
 interface MapControlsProps {
   onZoomIn: () => void;
@@ -12,14 +12,14 @@ const MapControls: React.FC<MapControlsProps> = ({
   onZoomIn,
   onZoomOut,
   onLocateMe,
-  isLocating = false
+  isLocating = false,
 }) => {
   return (
-    <div className="absolute top-4 right-4 z-10 map-overlay p-1 flex flex-row space-x-1">
+    <div className="absolute top-4 right-4 z-10 map-overlay p-1 flex flex-col">
       <Button
         variant="ghost"
         size="sm"
-        className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded-md"
+        className="p-2 hover:bg-red-50 hover:text-red-600 rounded-md"
         onClick={onZoomIn}
         title="Zoom In"
       >
@@ -28,20 +28,20 @@ const MapControls: React.FC<MapControlsProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded-md"
+        className="p-2 hover:bg-red-50 hover:text-red-600 rounded-md"
         onClick={onZoomOut}
         title="Zoom Out"
       >
         <span className="material-icons text-sm">remove</span>
       </Button>
-      
-      <div className="mx-1 border-r border-gray-200 h-6 self-center"></div>
-      
+
+      <div className="mx-auto border-b border-gray-200 w-8 self-center"></div>
+
       <Button
         variant="ghost"
         size="sm"
-        className={`p-1.5 hover:bg-red-50 hover:text-red-600 rounded-md ${
-          isLocating ? 'text-accent animate-pulse' : 'text-accent'
+        className={`p-2 hover:bg-red-50 hover:text-red-600 rounded-md ${
+          isLocating ? "text-accent animate-pulse" : "text-accent"
         }`}
         onClick={onLocateMe}
         disabled={isLocating}
