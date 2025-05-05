@@ -205,26 +205,7 @@ const Map: React.FC<MapProps> = ({
   // Handle user location updates
   useEffect(() => {
     if (map.current && userLocation && mapLoaded) {
-      // Add or update user location marker
-      const el = document.createElement('div');
-      el.className = 'w-5 h-5 relative flex items-center justify-center';
-      
-      // Add a pulsing effect
-      const pulseRing = document.createElement('div');
-      pulseRing.className = 'absolute w-full h-full bg-blue-500 opacity-70 rounded-full animate-ping';
-      el.appendChild(pulseRing);
-      
-      // Add the center marker dot
-      const centerDot = document.createElement('div');
-      centerDot.className = 'absolute w-3 h-3 bg-blue-600 rounded-full border-2 border-white z-10';
-      el.appendChild(centerDot);
-      
-      // Create and add the user location marker
-      new mapboxgl.Marker(el)
-        .setLngLat([userLocation.longitude, userLocation.latitude])
-        .addTo(map.current);
-      
-      // Fly to user location with an appropriate zoom level
+      // Just fly to user location without adding a marker
       map.current.flyTo({
         center: [userLocation.longitude, userLocation.latitude],
         zoom: 6, // Zoom level that shows the user location and surrounding region
