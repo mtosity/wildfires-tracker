@@ -95,16 +95,18 @@ const FirePopup: React.FC<FirePopupProps> = ({
         </div>
       </div>
       <div className="mt-3 flex justify-between">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="flex items-center text-accent-dark p-0 h-auto"
-          onClick={wildfire.newsUrl ? () => window.open(wildfire.newsUrl, '_blank') : onViewDetails}
-          title={wildfire.newsUrl ? "Open news article in new tab" : "View details"}
-        >
-          <span className="material-icons text-sm mr-1">{wildfire.newsUrl ? 'article' : 'info'}</span>
-          {wildfire.newsUrl ? 'News' : 'Details'}
-        </Button>
+        {wildfire.newsUrl && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center text-accent-dark p-0 h-auto"
+            onClick={() => window.open(wildfire.newsUrl, '_blank')}
+            title="Open news article in new tab"
+          >
+            <span className="material-icons text-sm mr-1">article</span>
+            News
+          </Button>
+        )}
         <Button 
           variant="ghost" 
           size="sm" 
