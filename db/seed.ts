@@ -10,41 +10,46 @@ async function seed() {
     // Helper function to check if data exists
     const wildfireExists = async (id: string) => {
       const existing = await db.query.wildfires.findFirst({
-        where: (wildfires, { eq }) => eq(wildfires.id, id)
+        where: (wildfires, { eq }) => eq(wildfires.id, id),
       });
       return !!existing;
     };
 
     // Helper function to generate circle coordinates around a point
-    const generateCircleCoordinates = (centerLat: number, centerLng: number, radiusInKm: number, points: number = 30) => {
+    const generateCircleCoordinates = (
+      centerLat: number,
+      centerLng: number,
+      radiusInKm: number,
+      points: number = 30
+    ) => {
       const coordinates = [];
-      const angularDistance = 2 * Math.PI / points;
-      
+      const angularDistance = (2 * Math.PI) / points;
+
       for (let i = 0; i < points; i++) {
         const angle = i * angularDistance;
-        
+
         // Calculate coordinates
         const latOffset = (radiusInKm / 111.32) * Math.cos(angle); // 1 degree of latitude is approximately 111.32 km
-        const lngFactor = Math.cos(centerLat * Math.PI / 180);
+        const lngFactor = Math.cos((centerLat * Math.PI) / 180);
         const lngOffset = (radiusInKm / (111.32 * lngFactor)) * Math.sin(angle);
-        
+
         const lat = centerLat + latOffset;
         const lng = centerLng + lngOffset;
-        
+
         coordinates.push({ lng, lat });
       }
-      
+
       // Close the loop
       coordinates.push(coordinates[0]);
-      
+
       return coordinates;
     };
-    
+
     // Calculate radius (in km) from acres
     const acresAreaToRadius = (acres: number) => {
       // 1 acre is approximately 0.00404686 km²
       const areaInKm2 = acres * 0.00404686;
-      
+
       // Area of a circle is πr²
       // r = sqrt(area / π)
       return Math.sqrt(areaInKm2 / Math.PI);
@@ -63,9 +68,11 @@ async function seed() {
         startDate: "Sep 12, 2023",
         severity: "high",
         cause: "Lightning",
-        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(37.8651, -119.5383, acresAreaToRadius(1243))),
+        perimeterCoordinates: JSON.stringify(
+          generateCircleCoordinates(37.8651, -119.5383, acresAreaToRadius(1243))
+        ),
         newsUrl: "https://www.nps.gov/yose/learn/news/wildfire.htm",
-        updated: new Date()
+        updated: new Date(),
       },
       {
         id: "emf-002",
@@ -78,8 +85,10 @@ async function seed() {
         startDate: "Sep 14, 2023",
         severity: "medium",
         cause: "Human",
-        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(39.6553, -106.8287, acresAreaToRadius(487))),
-        updated: new Date()
+        perimeterCoordinates: JSON.stringify(
+          generateCircleCoordinates(39.6553, -106.8287, acresAreaToRadius(487))
+        ),
+        updated: new Date(),
       },
       {
         id: "blf-003",
@@ -92,8 +101,10 @@ async function seed() {
         startDate: "Sep 10, 2023",
         severity: "low",
         cause: "Unknown",
-        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(37.2046, -119.2539, acresAreaToRadius(150))),
-        updated: new Date()
+        perimeterCoordinates: JSON.stringify(
+          generateCircleCoordinates(37.2046, -119.2539, acresAreaToRadius(150))
+        ),
+        updated: new Date(),
       },
       {
         id: "rrf-004",
@@ -106,24 +117,28 @@ async function seed() {
         startDate: "Sep 8, 2023",
         severity: "high",
         cause: "Lightning",
-        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(35.9728, -111.9876, acresAreaToRadius(3200))),
+        perimeterCoordinates: JSON.stringify(
+          generateCircleCoordinates(35.9728, -111.9876, acresAreaToRadius(3200))
+        ),
         newsUrl: "https://www.fs.usda.gov/coconino/",
-        updated: new Date()
+        updated: new Date(),
       },
       {
         id: "gbf-005",
         name: "Green Basin Fire",
         location: "Wasatch County, UT",
         latitude: 40.6461,
-        longitude: -111.4980,
+        longitude: -111.498,
         acres: 890,
         containment: 60,
         startDate: "Sep 13, 2023",
         severity: "medium",
         cause: "Campfire",
-        perimeterCoordinates: JSON.stringify(generateCircleCoordinates(40.6461, -111.4980, acresAreaToRadius(890))),
-        updated: new Date()
-      }
+        perimeterCoordinates: JSON.stringify(
+          generateCircleCoordinates(40.6461, -111.498, acresAreaToRadius(890))
+        ),
+        updated: new Date(),
+      },
     ];
 
     // Sample alerts
@@ -137,7 +152,7 @@ async function seed() {
         wildfireId: "emf-002",
         zones: ["Zone 2", "Zone 3"],
         active: true,
-        createdAt: new Date()
+        createdAt: new Date(),
       },
       {
         id: "alert-002",
@@ -148,8 +163,8 @@ async function seed() {
         wildfireId: "crf-001",
         zones: ["All areas"],
         active: true,
-        createdAt: new Date()
-      }
+        createdAt: new Date(),
+      },
     ];
 
     // Sample updates
@@ -157,18 +172,18 @@ async function seed() {
       {
         wildfireId: "crf-001",
         content: "Containment increased to 15%",
-        timestamp: new Date("2023-09-14T10:30:00Z")
+        timestamp: new Date("2023-09-14T10:30:00Z"),
       },
       {
         wildfireId: "crf-001",
         content: "Evacuation orders expanded to Zone 3",
-        timestamp: new Date("2023-09-13T18:15:00Z")
+        timestamp: new Date("2023-09-13T18:15:00Z"),
       },
       {
         wildfireId: "emf-002",
         content: "Fire growth slowed due to favorable weather",
-        timestamp: new Date("2023-09-15T09:45:00Z")
-      }
+        timestamp: new Date("2023-09-15T09:45:00Z"),
+      },
     ];
 
     // Insert wildfires if they don't already exist, otherwise update with perimeter data
@@ -188,25 +203,28 @@ async function seed() {
           cause: wildfire.cause,
           perimeterCoordinates: wildfire.perimeterCoordinates,
           newsUrl: (wildfire as any).newsUrl, // Type assertion for the optional property
-          updated: wildfire.updated
+          updated: wildfire.updated,
         });
         console.log(`Inserted wildfire: ${wildfire.name}`);
       } else {
         // Update the existing wildfire with perimeter coordinates and news URL
-        await db.update(schema.wildfires)
-          .set({ 
+        await db
+          .update(schema.wildfires)
+          .set({
             perimeterCoordinates: wildfire.perimeterCoordinates,
-            newsUrl: (wildfire as any).newsUrl // Add news URL to existing records 
+            newsUrl: (wildfire as any).newsUrl, // Add news URL to existing records
           })
           .where(eq(schema.wildfires.id, wildfire.id));
-        console.log(`Updated wildfire: ${wildfire.name} with perimeter coordinates`);
+        console.log(
+          `Updated wildfire: ${wildfire.name} with perimeter coordinates`
+        );
       }
     }
 
     // Insert alerts
     for (const alert of alerts) {
       const exists = await db.query.alerts.findFirst({
-        where: (alerts, { eq }) => eq(alerts.id, alert.id)
+        where: (alerts, { eq }) => eq(alerts.id, alert.id),
       });
 
       if (!exists) {
@@ -219,7 +237,7 @@ async function seed() {
           wildfireId: alert.wildfireId,
           zones: alert.zones,
           active: alert.active,
-          createdAt: alert.createdAt
+          createdAt: alert.createdAt,
         });
         console.log(`Inserted alert: ${alert.title}`);
       } else {
@@ -231,21 +249,24 @@ async function seed() {
     for (const update of updates) {
       // Check if update exists (by content and wildfire ID)
       const exists = await db.query.updates.findFirst({
-        where: (dbUpdates, { and, eq }) => and(
-          eq(dbUpdates.wildfireId, update.wildfireId),
-          eq(dbUpdates.content, update.content)
-        )
+        where: (dbUpdates, { and, eq }) =>
+          and(
+            eq(dbUpdates.wildfireId, update.wildfireId),
+            eq(dbUpdates.content, update.content)
+          ),
       });
 
       if (!exists) {
         await db.insert(schema.updates).values({
           wildfireId: update.wildfireId,
           content: update.content,
-          timestamp: update.timestamp
+          timestamp: update.timestamp,
         });
         console.log(`Inserted update for wildfire ID ${update.wildfireId}`);
       } else {
-        console.log(`Update already exists for wildfire ID ${update.wildfireId}`);
+        console.log(
+          `Update already exists for wildfire ID ${update.wildfireId}`
+        );
       }
     }
 

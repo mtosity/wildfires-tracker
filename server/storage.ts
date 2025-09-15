@@ -1,7 +1,11 @@
 import { db } from "../db/index.js";
 import * as schema from "../shared/schema.js";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
-import { type Wildfire, type Alert, type MapBounds } from "../types/wildfire.js";
+import {
+  type Wildfire,
+  type Alert,
+  type MapBounds,
+} from "../types/wildfire.js";
 
 export const storage = {
   // Wildfires
@@ -17,7 +21,9 @@ export const storage = {
     });
   },
 
-  getWildfiresInBounds: async (bounds: MapBounds): Promise<schema.Wildfire[]> => {
+  getWildfiresInBounds: async (
+    bounds: MapBounds
+  ): Promise<schema.Wildfire[]> => {
     return db.query.wildfires.findMany({
       where: and(
         gte(schema.wildfires.latitude, bounds.south),
@@ -36,9 +42,9 @@ export const storage = {
   ): Promise<schema.Wildfire[]> => {
     // First, get all wildfires (we'll filter them post-query)
     const allWildfires = await db.query.wildfires.findMany();
-    
+
     // Filter for those within the radius
-    return allWildfires.filter(wildfire => {
+    return allWildfires.filter((wildfire) => {
       const distance = calculateDistance(
         latitude,
         longitude,
@@ -60,9 +66,7 @@ export const storage = {
         totalAcresBurning: sql<number>`sum(${schema.wildfires.acres})`,
       })
       .from(schema.wildfires)
-      .where(
-        sql`${schema.wildfires.containment} < 100`
-      );
+      .where(sql`${schema.wildfires.containment} < 100`);
 
     return {
       activeFiresCount: result?.activeFiresCount || 0,
@@ -78,7 +82,9 @@ export const storage = {
     });
   },
 
-  getAlertsByWildfireId: async (wildfireId: string): Promise<schema.Alert[]> => {
+  getAlertsByWildfireId: async (
+    wildfireId: string
+  ): Promise<schema.Alert[]> => {
     return db.query.alerts.findMany({
       where: eq(schema.alerts.wildfireId, wildfireId),
       orderBy: (alerts, { desc }) => [desc(alerts.createdAt)],
