@@ -1,5 +1,5 @@
 // Vercel serverless function entry point
-import { VercelRequest, VercelResponse } from "@vercel/node";
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import express from "express";
 import { db } from "../db/index.js";
 import * as schema from "../shared/schema.js";
@@ -11,22 +11,14 @@ import NodeCache from "node-cache";
 const apiCache = new NodeCache({ stdTTL: 300 }); // 5 minute cache
 
 // Utility function to calculate distance between two points
-function calculateDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959; // Earth's radius in miles
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
 
@@ -58,29 +50,22 @@ const storage = {
 
   getNearbyWildfires: async (lat: number, lng: number, radius: number) => {
     const allWildfires = await db.query.wildfires.findMany();
-    return allWildfires.filter((fire) => {
-      const distance = calculateDistance(
-        lat,
-        lng,
-        fire.latitude,
-        fire.longitude
-      );
+    return allWildfires.filter(fire => {
+      const distance = calculateDistance(lat, lng, fire.latitude, fire.longitude);
       return distance <= radius;
     });
   },
 
   getWildfireStats: async () => {
-    const result = await db
-      .select({
-        activeFiresCount: sql<number>`count(*)`,
-        totalAcresBurning: sql<number>`sum(${schema.wildfires.acres})`,
-      })
-      .from(schema.wildfires);
-
+    const result = await db.select({
+      activeFiresCount: sql<number>`count(*)`,
+      totalAcresBurning: sql<number>`sum(${schema.wildfires.acres})`,
+    }).from(schema.wildfires);
+    
     return {
       activeFiresCount: result[0].activeFiresCount || 0,
       totalAcresBurning: result[0].totalAcresBurning || 0,
-      nearbyFiresCount: 0,
+      nearbyFiresCount: 0
     };
   },
 
@@ -96,22 +81,15 @@ const storage = {
     });
   },
 
-  subscribeToAlerts: async (
-    wildfireId: string,
-    email?: string,
-    phone?: string
-  ) => {
+  subscribeToAlerts: async (wildfireId: string, email?: string, phone?: string) => {
     // This is a simplified version - in production you'd want proper subscription logic
-    return {
-      success: true,
-      message: "Subscription functionality not implemented yet",
-    };
+    return { success: true, message: "Subscription functionality not implemented yet" };
   },
 
   getRecentUpdates: async (wildfireId: string) => {
     // This is a simplified version - in production you'd have an updates table
     return [];
-  },
+  }
 };
 
 const app = express();
@@ -120,14 +98,11 @@ app.use(express.urlencoded({ extended: false }));
 
 // Add CORS headers for Vercel
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
 
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     res.sendStatus(200);
   } else {
     next();
@@ -140,18 +115,14 @@ const apiPrefix = "/api";
 // Get all wildfires or within bounds
 app.get(`${apiPrefix}/wildfires`, async (req, res) => {
   try {
-    const bounds = req.query.bounds
-      ? JSON.parse(req.query.bounds as string)
-      : null;
+    const bounds = req.query.bounds ? JSON.parse(req.query.bounds as string) : null;
     let wildfires;
 
-    if (
-      bounds &&
-      typeof bounds.north === "number" &&
-      typeof bounds.south === "number" &&
-      typeof bounds.east === "number" &&
-      typeof bounds.west === "number"
-    ) {
+    if (bounds && 
+        typeof bounds.north === 'number' && 
+        typeof bounds.south === 'number' && 
+        typeof bounds.east === 'number' && 
+        typeof bounds.west === 'number') {
       wildfires = await storage.getWildfiresInBounds(bounds);
     } else {
       wildfires = await storage.getAllWildfires();
@@ -168,7 +139,7 @@ app.get(`${apiPrefix}/wildfires`, async (req, res) => {
 app.get(`${apiPrefix}/wildfires/stats`, async (req, res) => {
   try {
     const stats = await storage.getWildfireStats();
-
+    
     if (req.query.latitude && req.query.longitude) {
       const nearbyWildfires = await storage.getNearbyWildfires(
         parseFloat(req.query.latitude as string),
@@ -177,16 +148,16 @@ app.get(`${apiPrefix}/wildfires/stats`, async (req, res) => {
       );
       stats.nearbyFiresCount = nearbyWildfires.length;
     }
-
+    
     res.json({ stats });
   } catch (error) {
     console.error("Error fetching wildfire stats:", error);
-    res.json({
+    res.json({ 
       stats: {
         activeFiresCount: 0,
         totalAcresBurning: 0,
-        nearbyFiresCount: 0,
-      },
+        nearbyFiresCount: 0
+      }
     });
   }
 });
@@ -195,17 +166,17 @@ app.get(`${apiPrefix}/wildfires/stats`, async (req, res) => {
 app.get(`${apiPrefix}/wildfires/nearby`, async (req, res) => {
   try {
     const { latitude, longitude, radius = 100 } = req.query;
-
+    
     if (!latitude || !longitude) {
       return res.json({ wildfires: [] });
     }
-
+    
     const nearbyWildfires = await storage.getNearbyWildfires(
       parseFloat(latitude as string),
       parseFloat(longitude as string),
       parseFloat(radius as string)
     );
-
+    
     res.json({ wildfires: nearbyWildfires });
   } catch (error) {
     console.error("Error fetching nearby wildfires:", error);
@@ -217,11 +188,11 @@ app.get(`${apiPrefix}/wildfires/nearby`, async (req, res) => {
 app.get(`${apiPrefix}/wildfires/:id`, async (req, res) => {
   try {
     const wildfire = await storage.getWildfireById(req.params.id);
-
+    
     if (!wildfire) {
       return res.status(404).json({ message: "Wildfire not found" });
     }
-
+    
     res.json({ wildfire });
   } catch (error) {
     console.error("Error fetching wildfire:", error);
@@ -234,20 +205,19 @@ app.get(`${apiPrefix}/alerts/active`, async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
     const allAlerts = await storage.getActiveAlerts();
-
+    
     if (latitude && longitude) {
       const nearbyWildfires = await storage.getNearbyWildfires(
         parseFloat(latitude as string),
         parseFloat(longitude as string),
         100
       );
-
-      const nearbyWildfireIds = nearbyWildfires.map((fire) => fire.id);
-      const nearbyAlerts = allAlerts.filter(
-        (alert) =>
-          alert.wildfireId && nearbyWildfireIds.includes(alert.wildfireId)
+      
+      const nearbyWildfireIds = nearbyWildfires.map(fire => fire.id);
+      const nearbyAlerts = allAlerts.filter(alert => 
+        alert.wildfireId && nearbyWildfireIds.includes(alert.wildfireId)
       );
-
+      
       res.json({ alerts: nearbyAlerts });
     } else {
       res.json({ alerts: allAlerts });
