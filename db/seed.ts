@@ -1,5 +1,5 @@
 import { db } from "./index";
-import * as schema from "@shared/schema";
+import * as schema from "../shared/schema.js";
 import { v4 as uuidv4 } from "uuid";
 import { eq } from "drizzle-orm";
 
