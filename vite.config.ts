@@ -4,20 +4,16 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
-  root: path.resolve(import.meta.dirname, "client"),
   resolve: {
     alias: {
       "@db": path.resolve(import.meta.dirname, "db"),
-      "@": path.resolve(import.meta.dirname, "client/src"),
+      "@": path.resolve(import.meta.dirname, "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
   build: {
-    outDir: path.resolve(import.meta.dirname, "client/dist"),
+    outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
-    rollupOptions: {
-      input: path.resolve(import.meta.dirname, "client/index.html"),
-    },
   },
 });

@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx vite build --config vite.config.ts && mkdir -p public && cp -r client/dist/* public/ && cp -r client/public/* public/",
+  "buildCommand": "npm run build:vercel",
   "outputDirectory": "./public",
   "rewrites": [
     {
