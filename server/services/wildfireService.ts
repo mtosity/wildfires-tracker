@@ -90,6 +90,10 @@ function convertFirmsToWildfire(
       severity = "contained";
     }
 
+    if (severity === "low" || severity === "contained") {
+      return; // Skip this fire group
+    }
+
     // Get the most recent acquisition date
     const dates = fires.map(
       (fire) =>
@@ -192,7 +196,7 @@ export async function fetchAndUpdateWildfires() {
     const source = "VIIRS_NOAA20_NRT";
     // USA bounding box coordinates: [west, south, east, north]
     // Covers continental US, Alaska, and Hawaii
-    const area = "-179.14,18.91,-66.96,71.36"; // USA coordinates
+    const area = "world"; // USA coordinates
     const dayRange = 3;
 
     const apiUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${apiKey}/${source}/${area}/${dayRange}`;
@@ -263,8 +267,11 @@ export async function fetchAndUpdateWildfires() {
     // Get existing wildfires from our database
     const existingWildfires = await db.query.wildfires.findMany();
 
-    // Convert FIRMS data to our schema
+    // Convert FIRMS data to our schema (filtered to only high severity fires)
     const wildfires = convertFirmsToWildfire(firmsData, existingWildfires);
+    console.log(
+      `Filtered to ${wildfires.length} high severity wildfires from ${firmsData.length} total fires`
+    );
 
     // Update database with new/updated wildfires
     for (const wildfire of wildfires) {

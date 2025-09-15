@@ -89,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Fetch and update wildfires from NASA FIRMS API
+  // Fetch and update wildfires from NASA FIRMS API (only high severity fires)
   app.get(`${apiPrefix}/wildfires/refresh`, async (req, res) => {
     try {
       // Check if we have recently fetched data to avoid API abuse
