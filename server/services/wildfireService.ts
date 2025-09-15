@@ -27,7 +27,7 @@ interface FirmsFireData {
 // Convert FIRMS data to our Wildfire schema
 function convertFirmsToWildfire(
   firmsData: FirmsFireData[],
-  existingWildfires: schema.Wildfire[],
+  existingWildfires: schema.Wildfire[]
 ): schema.WildfireInsert[] {
   // Group fires by location (within a certain radius)
   const fireGroups: { [key: string]: FirmsFireData[] } = {};
@@ -35,7 +35,9 @@ function convertFirmsToWildfire(
   firmsData.forEach((fire) => {
     // Use a grid-based approach to cluster nearby fires
     // Round coordinates to 2 decimal places for clustering (roughly 1km precision)
-    const gridKey = `${Math.round(fire.latitude * 100) / 100},${Math.round(fire.longitude * 100) / 100}`;
+    const gridKey = `${Math.round(fire.latitude * 100) / 100},${
+      Math.round(fire.longitude * 100) / 100
+    }`;
 
     if (!fireGroups[gridKey]) {
       fireGroups[gridKey] = [];
@@ -60,7 +62,7 @@ function convertFirmsToWildfire(
         avgLat,
         avgLon,
         existing.latitude,
-        existing.longitude,
+        existing.longitude
       );
       // If within 5km, consider it the same fire
       return distance < 5;
@@ -92,8 +94,11 @@ function convertFirmsToWildfire(
     const dates = fires.map(
       (fire) =>
         new Date(
-          `${fire.acq_date} ${fire.acq_time.substring(0, 2)}:${fire.acq_time.substring(2, 4)}`,
-        ),
+          `${fire.acq_date} ${fire.acq_time.substring(
+            0,
+            2
+          )}:${fire.acq_time.substring(2, 4)}`
+        )
     );
     const mostRecentDate = new Date(Math.max(...dates.map((d) => d.getTime())));
 
@@ -109,7 +114,7 @@ function convertFirmsToWildfire(
     const perimeterCoords = generateCircleCoordinates(
       avgLat,
       avgLon,
-      radiusInKm,
+      radiusInKm
     );
 
     const fireId = existingFire
@@ -144,7 +149,7 @@ function generateCircleCoordinates(
   centerLat: number,
   centerLng: number,
   radiusInKm: number,
-  points: number = 30,
+  points: number = 30
 ) {
   const coordinates = [];
   const angularDistance = (2 * Math.PI) / points;
@@ -206,7 +211,7 @@ export async function fetchAndUpdateWildfires() {
     // Get a small sample of the response for debugging
     console.log(
       "NASA FIRMS API response data preview:",
-      response.data.substring(0, 200) + "...",
+      response.data.substring(0, 200) + "..."
     );
 
     // Parse CSV response (simplified handling for demo)
