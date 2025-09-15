@@ -1,7 +1,7 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
-import * as schema from "@shared/schema";
-import { db } from "@db";
+import * as schema from "../../shared/schema.js";
+import { db } from "../../db/index.js";
 import { eq } from "drizzle-orm";
 import { calculateDistance } from "../storage";
 

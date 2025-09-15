@@ -1,0 +1,41 @@
+# Docker Compose for local development and testing
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - NASA_FIRMS_API_KEY=${NASA_FIRMS_API_KEY}
+    depends_on:
+      - postgres
+    volumes:
+      - ./logs:/app/logs
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: firetracker
+      POSTGRES_USER: firetracker
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./client/dist:/usr/share/nginx/html
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:

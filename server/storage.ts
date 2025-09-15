@@ -1,8 +1,7 @@
-import { db } from "@db";
-import * as schema from "@shared/schema";
+import { db } from "../db/index.js";
+import * as schema from "../shared/schema.js";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
-import { type Wildfire, type Alert, type MapBounds } from "@/types/wildfire";
-import { calculateDistance } from "@/lib/utils";
+import { type Wildfire, type Alert, type MapBounds } from "../types/wildfire.js";
 
 export const storage = {
   // Wildfires

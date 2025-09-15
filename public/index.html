@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <!-- Script to set theme class before page loads to prevent flash -->
+    <script>
+      (function() {
+        // Check localStorage for theme preference
+        const storedTheme = localStorage.getItem('ui-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        // If dark theme is stored or system prefers dark and no preference
+        if (storedTheme === 'dark' || (!storedTheme && prefersDark) || storedTheme === 'system' && prefersDark) {
+          document.documentElement.classList.add('dark');
+        } else if (storedTheme === 'light') {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
+    
+    <!-- Title -->
+    <title>FireTracker - Real-time Wildfire Monitoring</title>
+    
+    <!-- Favicon and App Manifest -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="FireTracker - Real-time Wildfire Monitoring">
+    <meta name="description" content="Monitor active wildfires across the USA with real-time data, emergency alerts, and critical fire information to stay informed and safe.">
+    <meta name="keywords" content="wildfire, tracking, real-time, fire alerts, usa wildfires, emergency monitoring">
+    <meta name="author" content="FireTracker Team">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://firetracker.com/">
+    <meta property="og:title" content="FireTracker - Real-time Wildfire Monitoring">
+    <meta property="og:description" content="Monitor active wildfires across the USA with real-time data, emergency alerts, and critical fire information to stay informed and safe.">
+    <meta property="og:image" content="/thumbnail.svg">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://firetracker.com/">
+    <meta property="twitter:title" content="FireTracker - Real-time Wildfire Monitoring">
+    <meta property="twitter:description" content="Monitor active wildfires across the USA with real-time data, emergency alerts, and critical fire information to stay informed and safe.">
+    <meta property="twitter:image" content="/thumbnail.svg">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Theme Color for Browser UI -->
+    <meta name="theme-color" content="#e53e3e">
+    <script type="module" crossorigin src="/assets/index-Hk8SMTWe.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-UhZ_rqDL.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
